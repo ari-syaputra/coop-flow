@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -26,4 +27,3 @@ export default function OverviewContent({ adminName }: OverviewContentProps) {
       <TipsAlert />
     </div>
   );
-}
