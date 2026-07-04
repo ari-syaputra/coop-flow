@@ -21,4 +21,8 @@ class User extends Authenticatable
     {
         return $this->hasMany(Parcel::class);
     }
+
+    public function farmer() {
+        return $this->hasOne(Farmer::class);
+    }
 }

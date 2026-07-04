@@ -1,20 +1,17 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { FaBars, FaBell, FaUserCircle, FaSignOutAlt } from 'react-icons/fa';
+import { FaBell, FaChevronDown, FaSearch, FaCloudUploadAlt, FaSignOutAlt } from 'react-icons/fa';
 
 interface NavbarProps {
-  isOpen: boolean;
-  setIsOpen: (open: boolean) => void;
   adminName: string;
   handleLogout: () => void; 
 }
 
-export default function Navbar({ isOpen, setIsOpen, adminName, handleLogout }: NavbarProps) {
+export default function Navbar({ adminName, handleLogout }: NavbarProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Menutup dropdown otomatis jika klik di luar area profil
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -26,48 +23,72 @@ export default function Navbar({ isOpen, setIsOpen, adminName, handleLogout }: N
   }, []);
 
   return (
-    <header className="h-16 bg-white border-b border-gray-200/80 flex items-center justify-between px-6 z-10 relative">
-      {/* Kiri: Toggle Button */}
-      <button 
-        onClick={() => setIsOpen(!isOpen)}
-        className="p-2 rounded-xl hover:bg-gray-100 text-gray-500 hover:text-gray-800 transition active:scale-95 border border-transparent hover:border-gray-200"
-      >
-        <FaBars className="text-lg" />
-      </button>
+    <header className="h-20 bg-white border-b border-zinc-100 flex items-center justify-between px-6 lg:px-12 sticky top-0 z-50 shadow-sm shadow-zinc-100/50">
+      
+      {/* Kiri: Logo & Nama App */}
+      <div className="flex items-center space-x-3">
+        <div className="h-10 w-10 flex items-center justify-center rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 p-1.5 shadow-md shadow-emerald-100">
+          <img src="/logonobg.png" alt="Coopflow" className="h-full w-full object-contain brightness-0 invert" />
+        </div>
+        <div>
+          <span className="font-extrabold text-lg tracking-tight text-zinc-900 block leading-none">COOP-FLOW</span>
+          <span className="text-xs font-medium text-zinc-400 mt-0.5 block">Admin Lapangan</span>
+        </div>
+      </div>
 
-      {/* Kanan: Notifikasi & Profil */}
-      <div className="flex items-center space-x-4">
-        <button className="relative p-2.5 text-gray-400 hover:text-gray-700 hover:bg-gray-50 rounded-xl border border-transparent hover:border-gray-100 transition">
-          <FaBell className="text-lg" />
-          <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-emerald-500 rounded-full ring-2 ring-white"></span>
+      {/* Tengah: Search Bar Oval */}
+      <div className="hidden md:flex items-center flex-1 max-w-md mx-8 relative">
+        <FaSearch className="absolute left-4 text-zinc-400 text-sm" />
+        <input 
+          type="text" 
+          placeholder="Cari lahan, petani, atau aktivitas..." 
+          className="w-full bg-[#f4f4f5] text-sm text-zinc-700 pl-11 pr-4 py-2.5 rounded-full border border-transparent focus:outline-none focus:bg-white focus:border-zinc-200 transition-all duration-200 placeholder:text-zinc-400"
+        />
+      </div>
+
+      {/* Kanan: Sinkronisasi, Notifikasi & Profil */}
+      <div className="flex items-center space-x-5">
+        
+        {/* Status Sinkronisasi */}
+        <div className="hidden lg:flex items-center space-x-2.5 bg-[#f4f7f5] px-4 py-1.5 rounded-xl border border-green-100/50">
+          <FaCloudUploadAlt className="text-green-600 text-lg" />
+          <div className="text-left leading-tight">
+            <p className="text-[11px] font-bold text-green-700">Sinkronisasi</p>
+            <p className="text-[10px] text-zinc-400">Terakhir: 1 jam lalu</p>
+          </div>
+        </div>
+
+        {/* Notifikasi Bell dengan badge angka merah */}
+        <button className="relative p-2 text-zinc-400 hover:text-zinc-700 rounded-full hover:bg-zinc-50 transition">
+          <FaBell className="text-xl" />
+          <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-[9px] font-extrabold text-white rounded-full flex items-center justify-center ring-2 ring-white">
+            3
+          </span>
         </button>
         
-        {/* Kontainer Menu Profil dengan Dropdown */}
+        {/* Kontainer Dropdown Profil */}
         <div className="relative" ref={dropdownRef}>
           <div 
             onClick={() => setDropdownOpen(!dropdownOpen)}
-            className="flex items-center space-x-3 border-l pl-4 border-gray-200 h-8 cursor-pointer select-none group"
+            className="flex items-center space-x-3 cursor-pointer select-none group"
           >
-            <div className="text-right hidden sm:block">
-              <p className="text-sm font-semibold text-gray-800 leading-tight group-hover:text-emerald-600 transition">{adminName}</p>
-              <p className="text-[11px] font-medium text-emerald-600 tracking-wider uppercase">Admin Lapangan</p>
+            <img 
+              src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" 
+              alt="Avatar" 
+              className="h-9 w-9 rounded-full object-cover border border-zinc-200 shadow-sm"
+            />
+            <div className="text-left hidden sm:block">
+              <p className="text-sm font-bold text-zinc-800 leading-tight transition">{adminName}</p>
+              <p className="text-[11px] font-medium text-zinc-400 mt-0.5">Admin Lapangan</p>
             </div>
-            <div className="p-0.5 border-2 border-emerald-100 rounded-full group-hover:border-emerald-500 transition">
-              <FaUserCircle className="text-2xl text-gray-400 group-hover:text-gray-600" />
-            </div>
+            <FaChevronDown className="text-xs text-zinc-400 group-hover:text-zinc-600 transition" />
           </div>
 
-          {/* Elemen Dropdown Menu */}
           {dropdownOpen && (
-            <div className="absolute right-0 mt-3 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-              <div className="px-4 py-2 border-b border-gray-100 sm:hidden">
-                <p className="text-sm font-semibold text-gray-800 truncate">{adminName}</p>
-                <p className="text-xs text-emerald-600">Admin Lapangan</p>
-              </div>
-              
+            <div className="absolute right-0 mt-3 w-48 bg-white rounded-2xl shadow-xl border border-zinc-100/80 py-1.5 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
               <button
-                onClick={handleLogout} // Langsung memanggil fungsi props dari dashboard parent
-                className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 flex items-center space-x-2 font-medium transition"
+                onClick={handleLogout}
+                className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 flex items-center space-x-2.5 font-semibold transition"
               >
                 <FaSignOutAlt />
                 <span>Keluar Aplikasi</span>
