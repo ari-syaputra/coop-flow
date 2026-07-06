@@ -30,7 +30,7 @@ class RoleAndUserSeeder extends Seeder
         $adminLapangan = User::create([
             'name' => 'Budi Setiawan (Admin Lapangan)',
             'email' => 'admin.lapangan@coopflow.id',
-            'password' => Hash::make('password123'), // Silahkan ganti pas produksi
+            'password' => Hash::make('password123'),
             'phone' => '081234567890',
             'address' => 'Kantor Poktan Sleman, Yogyakarta'
         ]);

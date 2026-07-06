@@ -57,7 +57,7 @@ export default function LoginPage() {
       if (userRoles.includes("admin-lapangan")) {
         router.push("/dashboard/admin-lapangan");
       } else if (userRoles.includes("petugas-koperasi")) {
-        router.push("/dashboard/admin-koperasi");
+        router.push("/dashboard/admin-koprasi");
       } else if (userRoles.includes("dinas-pertanian")) {
         router.push("/dashboard/dinas-pertanian");
       } else if (userRoles.includes("kemenko-pangan")) {
