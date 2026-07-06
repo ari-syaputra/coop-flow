@@ -7,6 +7,7 @@ use App\Http\Controllers\FarmerGroupController;
 use App\Http\Controllers\PlantController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\CooperativeDashboardController;
 
 /*
 |--------------------------------------------------------------------------
@@ -43,5 +44,11 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Route untuk kelola tanaman
     Route::apiResource('plants', PlantController::class);
-    
-});
+
+    Route::post('/parcels', [ParcelController::class, 'store']); 
+
+    // untuk dasboard admin koprasi
+    Route::get('/cooperative/dashboard', [CooperativeDashboardController::class, 'getKoperasiData']);
+
+});    
+

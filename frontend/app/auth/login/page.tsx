@@ -6,28 +6,24 @@ import api from "../../lib/axios";
 import Swal from "sweetalert2";
 import { FiBarChart2, FiUsers, FiTrendingUp } from "react-icons/fi";
 
-
-
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Konfigurasi Standar Toast SweetAlert2 asli milik Anda
-const Toast = Swal.mixin({
-  toast: true,
-  position: "top-end",
-  showConfirmButton: false,
-  timer: 3000,
-  timerProgressBar: true,
-  didOpen: (toast) => {
-    toast.addEventListener("mouseenter", Swal.stopTimer);
-    toast.addEventListener("mouseleave", Swal.resumeTimer);
-  },
-});
+  const Toast = Swal.mixin({
+    toast: true,
+    position: "top-end",
+    showConfirmButton: false,
+    timer: 3000,
+    timerProgressBar: true,
+    didOpen: (toast) => {
+      toast.addEventListener("mouseenter", Swal.stopTimer);
+      toast.addEventListener("mouseleave", Swal.resumeTimer);
+    },
+  });
 
-  // Fungsi Logika Utama asli milik Anda (Tidak Disentuh)
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -54,12 +50,25 @@ const Toast = Swal.mixin({
         title: "Login Berhasil! Selamat datang.",
       });
 
+      // AMBIL SEMUA ROLE DARI USER
       const userRoles = user.roles?.map((r: any) => r.name) || [];
+
+      // REDIRECT BERDASARKAN ROLE SEEDER
       if (userRoles.includes("admin-lapangan")) {
         router.push("/dashboard/admin-lapangan");
+      } else if (userRoles.includes("petugas-koperasi")) {
+        router.push("/dashboard/admin-koperasi");
+      } else if (userRoles.includes("dinas-pertanian")) {
+        router.push("/dashboard/dinas-pertanian");
+      } else if (userRoles.includes("kemenko-pangan")) {
+        router.push("/dashboard/kemenko-pangan");
+      } else if (userRoles.includes("petani")) {
+        router.push("/dashboard/petani");
       } else {
+        // Fallback jika tidak ada role yang cocok
         router.push("/dashboard");
       }
+
     } catch (err: any) {
       let msg = "Tidak dapat terhubung ke server backend.";
       if (err.response && err.response.data) {
