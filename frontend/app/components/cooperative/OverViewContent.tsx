@@ -5,19 +5,23 @@ import CardPetani from "./CardPetani";
 import CardLahan from "./CardLahan";
 import CardPengajuan from "./CardPengajuan";
 import CardDistribusi from "./CardDistribusi";
-
-// 1. Import dua komponen baris kedua yang baru
-import ChartKebutuhan from "./ChartKebutuhan";
+// import ChartKebutuhan from "./ChartKebutuhan";
 import MapDistribusi from "./MapDistribusi";
 
-interface MetricsProps {
+// Interface untuk struktur data utama
+interface DashboardDataProps {
   totalPetani: number;
   luasLahan: number;
   totalPengajuan: number;
   distribusiSelesai: number;
+  chartData: {
+    months: string[];
+    prediksiCoords: number[];
+    stokCoords: number[];
+  };
 }
 
-export default function OverviewContent({ data }: { data: MetricsProps }) {
+export default function OverviewContent({ data }: { data: DashboardDataProps }) {
   return (
     <div className="w-full space-y-8">
       {/* BARIS 1: Judul Utama */}
@@ -38,9 +42,10 @@ export default function OverviewContent({ data }: { data: MetricsProps }) {
         <CardDistribusi jumlah={data.distribusiSelesai} />
       </div>
 
-      {/* BARIS 3: Grafik & Peta Wilayah (Flexbox Responsif) */}
+      {/* BARIS 3: Grafik & Peta Wilayah */}
       <div className="flex flex-col lg:flex-row gap-6 w-full items-stretch">
-        <ChartKebutuhan />
+        {/* Mengirimkan data chart ke komponen ChartKebutuhan */}
+        {/* <ChartKebutuhan chartData={data.chartData} /> */}
         <MapDistribusi />
       </div>
     </div>

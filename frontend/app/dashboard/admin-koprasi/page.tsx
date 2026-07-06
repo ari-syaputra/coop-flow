@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import Sidebar from "../../components/dashboard/Sidebar";
 import Navbar from "../../components/dashboard/Navbar";
 import OverviewContent from "../../components/cooperative/OverViewContent";
-// Catatan: Pastikan huruf besar/kecil file di atas adalah "OverviewContent.tsx"
+import api from "../../lib/axios"; 
 
 export default function AdminKoperasiDashboardPage() {
   const router = useRouter();
@@ -19,9 +19,9 @@ export default function AdminKoperasiDashboardPage() {
     totalPengajuan: 0,
     distribusiSelesai: 0,
     chartData: {
-      months: [],
-      prediksiCoords: [],
-      stokCoords: [],
+      months: [] as string[],
+      prediksiCoords: [] as number[],
+      stokCoords: [] as number[],
     },
   });
 
@@ -33,18 +33,12 @@ export default function AdminKoperasiDashboardPage() {
     async function fetchDashboardData() {
       try {
         setIsLoading(true);
-        const response = await fetch(
-          "http://127.0.0.1:8000/api/cooperative/dashboard",
-        );
-
-        if (!response.ok) {
-          throw new Error("Gagal mengambil data dari server backend");
-        }
-
-        const jsonResult = await response.json();
+        setErrorMessage(""); 
+        
+        const response = await api.get("/cooperative/dashboard");
+        const jsonResult = response.data;
 
         if (jsonResult.success) {
-          // Menyatukan data metrik riil dan simulasi grafik ke dalam state
           setMetricsData({
             totalPetani: jsonResult.data.metrics.totalPetani,
             luasLahan: jsonResult.data.metrics.luasLahan,
@@ -54,7 +48,8 @@ export default function AdminKoperasiDashboardPage() {
           });
         }
       } catch (error: any) {
-        setErrorMessage(error.message || "Terjadi kesalahan jaringan");
+        const message = error.response?.data?.message || error.message || "Terjadi kesalahan jaringan";
+        setErrorMessage(message);
         console.error("Error fetching dashboard data:", error);
       } finally {
         setIsLoading(false);
@@ -88,8 +83,7 @@ export default function AdminKoperasiDashboardPage() {
                   ⚠️ Gagal Sinkronisasi Data: {errorMessage}
                 </p>
                 <p className="text-xs text-gray-500 mt-1">
-                  Pastikan kontainer Docker `coopflow_webserver` berjalan lancar
-                  di port 8000.
+                  Pastikan service backend berjalan lancar dan periksa konfigurasi `NEXT_PUBLIC_API_URL`.
                 </p>
               </div>
             )}
