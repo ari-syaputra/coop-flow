@@ -43,28 +43,43 @@ export default function MasukStokSupplierPage() {
     },
   });
 
-  // Ambil daftar pupuk dan gudang dari backend saat halaman dimuat
-  useEffect(() => {
-    api
-      .get("/cooperative/inventory/overview")
-      .then((response) => {
-        if (response.data.status === "success") {
-          const uniqueFertilizers = response.data.stocks.map((s: any) => ({
-            id: s.id,
+  // disni jgaaaaa DISELERASKAN 
+useEffect(() => {
+  api
+    .get("/cooperative/inventory/overview")
+    .then((response) => {
+      if (response.data.status === "success") {
+        
+        const seen = new Set();
+        const uniqueFertilizers = response.data.stocks
+          .map((s: any) => ({
+            id: String(s.id), 
             name: s.name,
-          }));
-          setFertilizers(uniqueFertilizers);
-          setWarehouses(response.data.warehouses);
-        }
-      })
-      .catch((error) => {
-        console.error("Gagal memuat opsi dropdown form:", error);
-        Toast.fire({
-          icon: "error",
-          title: "Gagal memuat data pendukung dari server",
-        });
+          }))
+          .filter((el: any) => {
+            const duplicate = seen.has(el.name);
+            seen.add(el.name);
+            return !duplicate;
+          });
+          
+        setFertilizers(uniqueFertilizers);
+
+        const mappedWarehouses = response.data.warehouses.map((w: any) => ({
+          id: String(w.id), 
+          name: w.name,
+        }));
+
+        setWarehouses(mappedWarehouses);
+      }
+    })
+    .catch((error) => {
+      console.error("Gagal memuat opsi dropdown form:", error);
+      Toast.fire({
+        icon: "error",
+        title: "Gagal memuat data pendukung dari server",
       });
-  }, []);
+    });
+}, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
