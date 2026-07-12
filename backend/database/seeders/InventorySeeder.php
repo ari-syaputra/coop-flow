@@ -12,32 +12,56 @@ class InventorySeeder extends Seeder
 {
     public function run(): void
     {
-        // 1. Buat Data Koperasi Induk
-        $cooperative = Cooperative::create([
-            'name' => 'Koperasi Merah Putih'
+        // 1. Buat Data Koperasi Induk Ter-aktivasi (Untuk simulasi yang sudah jalan)
+        $cooperativeActive = Cooperative::create([
+            'name'                   => 'Koperasi Desa Merah Putih Ranjeng',
+            'cooperative_code'       => 'KDMP-3604-001',
+            'is_activated'           => true,          
+            'is_profile_completed'   => true,          
+            'address'                => 'Kecamatan Ciruas, Kabupaten Serang, Banten',
+            'latitude'               => -6.11234500,   
+            'longitude'              => 106.23456700,
+            'warehouse_capacity_ton' => 150
         ]);
 
-        // 2. Buat Data Multi-Gudang
+        // Buat Data Koperasi Sampel Belum Ter-aktivasi (Untuk Bahan Demo Dashboard Kemenko)
+        Cooperative::create([
+            'name'                   => 'Koperasi Desa Merah Putih Wonosari',
+            'cooperative_code'       => 'KDMP-3439-002',
+            'is_activated'           => false,         
+            'is_profile_completed'   => false,
+        ]);
+
+        Cooperative::create([
+            'name'                   => 'Koperasi Desa Merah Putih Subang',
+            'cooperative_code'       => 'KDMP-3213-003',
+            'is_activated'           => false,
+            'is_profile_completed'   => false,
+        ]);
+
+
+        // 2. Buat Data Multi-Gudang (Dikaitkan ke Koperasi yang sudah Aktif)
         $gudangPusat = Warehouse::create([
-            'cooperative_id' => $cooperative->id,
+            'cooperative_id' => $cooperativeActive->id,
             'name'           => 'Gudang Pusat Klaten',
             'capacity_kg'    => 100000 // 100 Ton
         ]);
 
         $gudangCabang = Warehouse::create([
-            'cooperative_id' => $cooperative->id,
+            'cooperative_id' => $cooperativeActive->id,
             'name'           => 'Gudang Cabang Sukamaju',
             'capacity_kg'    => 50000 // 50 Ton
         ]);
 
-        // 3. Buat Data Master Pupuk & Saldo Stok Awal (Sesuai Gambar UI Frontend)
+
+        // 3. Buat Data Master Pupuk & Saldo Stok Awal
         $dataPupuk = [
             [
                 'warehouse_id'       => $gudangPusat->id,
                 'name'               => 'Urea',
                 'current_stock_kg'   => 45250,
                 'minimum_stock_kg'   => 20000,
-                'price_per_kg'       => 2500, // Misal Rp 2.500/kg
+                'price_per_kg'       => 2500, 
             ],
             [
                 'warehouse_id'       => $gudangPusat->id,
@@ -77,7 +101,7 @@ class InventorySeeder extends Seeder
             [
                 'warehouse_id'       => $gudangCabang->id,
                 'name'               => 'ZA',
-                'current_stock_kg'   => 7000, // Di bawah minimal 10.000 agar memicu status Kritis
+                'current_stock_kg'   => 7000, 
                 'minimum_stock_kg'   => 10000,
                 'price_per_kg'       => 2200,
             ],
@@ -86,7 +110,7 @@ class InventorySeeder extends Seeder
         foreach ($dataPupuk as $item) {
             $fertilizer = Fertilizer::create($item);
 
-            // 4. Berikan data histori awal (mutasi masuk) sebagai pemanis halaman riwayat stok
+            // 4. Berikan data histori awal (mutasi masuk)
             InventoryMutation::create([
                 'fertilizer_id' => $fertilizer->id,
                 'type'          => 'masuk',

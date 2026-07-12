@@ -13,154 +13,121 @@ import {
   FaCalendarAlt,
   FaFileInvoiceDollar,
   FaCogs,
-  FaSignOutAlt,
-  FaQuestionCircle,
+  FaUsers,
+  FaSeedling,
 } from "react-icons/fa";
 
 interface SidebarProps {
   handleLogout: () => void;
+  role: string; 
+  isOpen: boolean;
 }
 
-export default function Sidebar({ handleLogout }: SidebarProps) {
+export default function Sidebar({ handleLogout, role, isOpen }: SidebarProps) {
   const pathname = usePathname();
 
-  // Daftar menu yang disesuaikan persis dengan gambar referensi COOP-FLOW Admin Koperasi
   const menuItems = [
-    { name: "Dashboard", icon: FaChartPie, href: "/dashboard/admin-koprasi" },
-    {
-      name: "Stok & Inventaris",
-      icon: FaBoxes,
-      href: "/dashboard/admin-koprasi/stok-inventaris",
-    },
-    {
-      name: "Distribusi",
-      icon: FaTruckLoading,
-      href: "/dashboard/admin-koprasi/riwayat-distribusi",
-    },
-    {
-      name: "Prediksi Kebutuhan",
-      icon: FaBrain,
-      href: "/dashboard/admin-koprasi/prediksi",
-    },
-    {
-      name: "Petani & Lahan",
-      icon: FaUserFriends,
-      href: "/dashboard/admin-koprasi/petani-lahan",
-    },
-    {
-      name: "Transaksi",
-      icon: FaExchangeAlt,
-      href: "/dashboard/admin-koprasi/transaksi",
-    },
-    {
-      name: "Kalender Tanam",
-      icon: FaCalendarAlt,
-      href: "/dashboard/admin-koprasi/kalender",
-    },
-    {
-      name: "Laporan",
-      icon: FaFileInvoiceDollar,
-      href: "/dashboard/admin-koprasi/laporan",
-    },
-    {
-      name: "Pengaturan",
-      icon: FaCogs,
-      href: "/dashboard/admin-koprasi/pengaturan",
-    },
+    // --- MENU KEMENKO PANGAN ---
+    { name: "Dashboard", icon: FaChartPie, href: "/dashboard/kemenko-pangan", roles: ["kemenko-pangan"] },
+    { name: "Cooperative Master", icon: FaUsers, href: "/dashboard/kemenko-pangan/cooperative-master", roles: ["kemenko-pangan"] },
+    { name: "Analytics", icon: FaChartPie, href: "/dashboard/kemenko-pangan/analytics", roles: ["kemenko-pangan"] },
+    { name: "System Settings", icon: FaCogs, href: "/dashboard/kemenko-pangan/settings", roles: ["kemenko-pangan"] },
+
+    // --- MENU PETUGAS KOPERASI ---
+    { name: "Dashboard", icon: FaChartPie, href: "/dashboard/admin-koprasi", roles: ["petugas-koperasi"] },
+    { name: "Stok & Inventaris", icon: FaBoxes, href: "/dashboard/admin-koprasi/stok-inventaris", roles: ["petugas-koperasi"] },
+    { name: "Distribusi", icon: FaTruckLoading, href: "/dashboard/admin-koprasi/riwayat-distribusi", roles: ["petugas-koperasi"] },
+    { name: "Prediksi Kebutuhan", icon: FaBrain, href: "/dashboard/admin-koprasi/prediksi", roles: ["petugas-koperasi"] },
+    { name: "Petani & Lahan", icon: FaUserFriends, href: "/dashboard/admin-koprasi/petani-lahan", roles: ["petugas-koperasi"] },
+    { name: "Transaksi", icon: FaExchangeAlt, href: "/dashboard/admin-koprasi/transaksi", roles: ["petugas-koperasi"] },
+    { name: "Kalender Tanam", icon: FaCalendarAlt, href: "/dashboard/admin-koprasi/kalender", roles: ["petugas-koperasi"] },
+    { name: "Laporan", icon: FaFileInvoiceDollar, href: "/dashboard/admin-koprasi/laporan", roles: ["petugas-koperasi"] },
+    { name: "Pengaturan", icon: FaCogs, href: "/dashboard/admin-koprasi/pengaturan", roles: ["petugas-koperasi"] },
   ];
 
+  const filteredMenuItems = menuItems.filter(item => item.roles.includes(role));
+
   return (
-    <aside className="w-64 min-h-screen bg-[#072F1A] text-white flex flex-col justify-between sticky top-0 h-screen shrink-0 font-sans shadow-xl">
+    <aside 
+      style={{
+        background: "linear-gradient(to bottom, #094D30 22%, #0F7B4A 51%, #195873 71%)"
+      }}
+      className={`${
+        isOpen ? "w-64" : "w-20"
+      } min-h-screen text-white flex flex-col justify-between sticky top-0 h-screen shrink-0 font-sans shadow-2xl transition-all duration-300 ease-in-out overflow-x-hidden`}
+    >
       <div>
-        {/* Header Sidebar: Logo & Nama Koperasi */}
-        <div className="p-5 flex items-center space-x-3 border-b border-white/5">
-          <div className="h-9 w-9 bg-emerald-500 rounded-xl flex items-center justify-center p-1.5 shadow-md shadow-emerald-900/50">
+        {/* Header Sidebar */}
+        <div className={`p-5 flex items-center ${isOpen ? "px-6" : "justify-center px-0 ml-5.5"} border-b border-white/5 h-18 transition-all duration-300`}>
+          <div className="h-14 w-14 flex items-center justify-center p-1.5 ">
             <img
               src="/logonobg.png"
               alt="Logo"
-              className="h-full w-full object-contain brightness-0 invert"
+              className="h-full w-full -ml-5.5 object-contain brightness-0 invert"
             />
           </div>
-          <div className="leading-tight">
-            <h2 className="font-black text-sm tracking-wider block">
-              COOP-FLOW
-            </h2>
-            <p className="text-[10px] text-emerald-400 font-medium tracking-wide mt-0.5 uppercase">
-              Koperasi Merah Putih
-            </p>
-          </div>
+          
+          {isOpen && (
+            <div className="leading-tight animate-in fade-in duration-200">
+              <h2 className="font-bold text-base text-[20px] tracking-wider block uppercase whitespace-nowrap text-white">
+                COOP <span className="text-[#04C070]">FLOW</span>
+              </h2>
+            </div>
+          )}
         </div>
 
         {/* Menu Navigasi Tengah */}
-        <nav className="p-4 space-y-1 overflow-y-auto max-h-[calc(100vh-160px)] scrollbar-thin">
-          {menuItems.map((item, idx) => {
+        <nav className="p-4 space-y-1.5 overflow-y-auto max-h-[calc(100vh-240px)] scrollbar-none">
+          {filteredMenuItems.map((item, idx) => {
             const Icon = item.icon;
-            
-            // ===================================================================
-            // PERBAIKAN DETAIL KECIL: LOGIKA AKURASI DETEKSI URL SUB-PAGE LOGISTIK
-            // ===================================================================
             let isActive = pathname === item.href;
 
             if (item.href === "/dashboard/admin-koprasi/stok-inventaris") {
-              // Tetap menyala jika admin membuka /stok-inventaris, /riwayat, maupun /mutasi
               isActive = pathname.startsWith("/dashboard/admin-koprasi/stok-inventaris");
-            } else if (item.href === "/dashboard/admin-koprasi") {
-              // Dashboard Utama hanya aktif jika URL pas (mencegah bentrok dengan sub-page fitur lain)
-              isActive = pathname === "/dashboard/admin-koprasi";
+            } else if (item.href === "/dashboard/admin-koprasi" || item.href === "/dashboard/kemenko-pangan") {
+              isActive = pathname === item.href;
             }
 
             return (
               <Link
                 key={idx}
                 href={item.href}
-                className={`flex items-center justify-between px-4 py-2.5 rounded-xl font-medium text-xs transition-all duration-150 group ${
+                title={!isOpen ? item.name : undefined}
+                className={`flex items-center ${
+                  isOpen ? "justify-between px-4" : "justify-center p-2.5"
+                } py-2.5 rounded-xl font-bold text-[15px] transition-all duration-150 group ${
                   isActive
-                    ? "bg-[#154D30] text-emerald-300 shadow-sm"
-                    : "text-slate-400 hover:bg-[#154D30]/40 hover:text-white"
+                    ? "bg-[#3BFF00]/30 text-white shadow-md shadow-black/15 font-semibold " 
+                    : "text-white hover:bg-[#3BFF00]/10 hover:text-white "
                 }`}
               >
-                <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-3.5 min-w-0">
                   <Icon
-                    className={`text-base transition-colors ${
-                      isActive
-                        ? "text-emerald-400"
-                        : "text-slate-500 group-hover:text-slate-300"
+                    className={`text-base shrink-0 transition-colors text-[20px] ${
+                      isActive ? "text-white" : "text-white group-hover:text-white"
                     }`}
                   />
-                  <span>{item.name}</span>
+                  {isOpen && (
+                    <span className="animate-in fade-in duration-150 whitespace-nowrap overflow-hidden text-ellipsis">
+                      {item.name}
+                    </span>
+                  )}
                 </div>
-
-                {/* Panah kecil penunjuk kanan jika menu tidak aktif */}
-                {!isActive && (
-                  <span className="text-[9px] text-slate-600 group-hover:text-slate-400 transition-transform group-hover:translate-x-0.5">
-                    &rarr;
-                  </span>
-                )}
               </Link>
             );
           })}
         </nav>
       </div>
 
-      {/* Bagian Bawah: Bantuan & Keluar */}
-      <div className="p-4 border-t border-white/5 space-y-1 bg-[#052414]">
-        {/* Tombol Bantuan seperti di referensi kiri bawah */}
-        <Link
-          href="#"
-          className="flex items-center space-x-3 px-4 py-2 rounded-xl text-xs font-medium text-slate-400 hover:text-white transition"
-        >
-          <FaQuestionCircle className="text-base text-slate-500" />
-          <span>Bantuan</span>
-        </Link>
-
-        {/* Tombol Logout Aplikasi */}
-        <button
-          onClick={handleLogout}
-          className="w-full flex items-center space-x-3 px-4 py-2 rounded-xl text-xs font-medium text-red-400 hover:bg-red-950/20 transition group"
-        >
-          <FaSignOutAlt className="text-base text-red-500/70 group-hover:text-red-400 transition-transform group-hover:-translate-x-0.5" />
-          <span>Keluar Aplikasi</span>
-        </button>
+      {/* Bagian Bawah: Ilustrasi Persawahan */}
+      <div className="w-full mt-auto shrink-0 relative overflow-hidden">
+        <img 
+          src="/sid.png" 
+          alt="Landscape" 
+          className={`w-full object-cover object-top transition-all duration-300 ${
+            isOpen ? "h-50 opacity-100" : "h-25 opacity-40"
+          }`} 
+        />
       </div>
     </aside>
   );

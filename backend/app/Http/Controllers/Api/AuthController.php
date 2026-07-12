@@ -22,20 +22,24 @@ class AuthController extends Controller
             'password' => 'required|string|min:8|confirmed',
             'phone' => 'nullable|string|unique:users',
             'address' => 'nullable|string',
-            'role' => 'nullable|string|in:admin-lapangan,ketua-poktan,petani,supplier' // Validasi pilihan role
+            'role' => 'nullable|string|in:ketua-poktan,petani,dinas-pertanian',
+            'cooperative_id' => 'required_if:role,petani,ketua-poktan|exists:cooperatives,id'
+        ], [
+            'cooperative_id.required_if' => 'Petani atau Ketua Poktan wajib memilih Koperasi tempat Anda bernaung.'
         ]);
 
         if ($validator->fails()) {
             return response()->json($validator->errors(), 422);
         }
 
-        // 2. Simpan Data User ke Database
+        // 2. Simpan Data User ke Database dengan cooperative_id
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'phone' => $request->phone,
             'address' => $request->address,
+            'cooperative_id' => $request->role === 'dinas-pertanian' ? null : $request->cooperative_id,
         ]);
 
         // 3. Berikan Role menggunakan Spatie Permission
@@ -49,7 +53,7 @@ class AuthController extends Controller
             'message' => 'Registrasi berhasil!',
             'access_token' => $token,
             'token_type' => 'Bearer',
-            'user' => $user->load('roles') // Mengikutkan data role di response JSON
+            'user' => $user->load('roles') 
         ], 201);
     }
 
@@ -58,30 +62,30 @@ class AuthController extends Controller
      */
     public function login(Request $request)
     {
-        // 1. Validasi Input Login
+        // Validasi Input Login
         $request->validate([
             'email' => 'required|string|email',
             'password' => 'required|string',
         ]);
 
-        // 2. Cari User Berdasarkan Email
+        // Cari User Berdasarkan Email
         $user = User::where('email', $request->email)->first();
 
-        // 3. Cek Ketersediaan User dan Kecocokan Password
+        // Cek Ketersediaan User dan Kecocokan Password
         if (!$user || !Hash::check($request->password, $user->password)) {
             return response()->json([
                 'message' => 'Email atau password salah.'
             ], 401);
         }
 
-        // 4. Buat Token Baru
+        // Buat Token Baru
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
             'message' => 'Login berhasil!',
             'access_token' => $token,
             'token_type' => 'Bearer',
-            'user' => $user->load('roles')
+            'user' => $user->load(['roles', 'cooperative'])
         ]);
     }
 
@@ -90,7 +94,6 @@ class AuthController extends Controller
      */
     public function logout(Request $request)
     {
-        // Menghapus token yang sedang digunakan untuk mengakses API ini
         $request->user()->currentAccessToken()->delete();
 
         return response()->json([

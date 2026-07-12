@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
     {
         // Daftarkan seeder role dan user kita di sini
         $this->call([
+            InventorySeeder::class,
             RoleAndUserSeeder::class,
         ]);
     }

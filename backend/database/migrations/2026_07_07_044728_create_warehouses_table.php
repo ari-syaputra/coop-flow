@@ -14,8 +14,8 @@ return new class extends Migration
         Schema::create('warehouses', function (Blueprint $table) {
             $table->id();
             $table->foreignId('cooperative_id')->constrained('cooperatives')->onDelete('cascade');
-            $table->string('name'); // Contoh: Gudang Cabang A
-            $table->integer('capacity_kg'); // Batas tampung maksimum
+            $table->string('name'); 
+            $table->integer('capacity_kg'); 
             $table->timestamps();
         });
     }

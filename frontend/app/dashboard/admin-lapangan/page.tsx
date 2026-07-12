@@ -20,13 +20,10 @@ export default function AdminLapanganDashboard() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-zinc-800 antialiased font-sans pb-12">
-      {/* 3. Tinggal pasang fungsi logout-nya di sini */}
-      <Navbar adminName={adminName} roleName="admin-lapangan" handleLogout={logout} />
-      
-      <div className="max-w-8xl mx-auto px-4 sm:px-6 lg:px-13 mt-6">
+
+     <div className="w-full font-sans">
         <OverviewContent adminName={adminName} />
       </div>
-    </div>
+   
   );
 }

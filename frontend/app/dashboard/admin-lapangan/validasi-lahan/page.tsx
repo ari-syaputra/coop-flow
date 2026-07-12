@@ -4,7 +4,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { FaWifi, FaArrowLeft } from 'react-icons/fa';
 import Swal from 'sweetalert2';
-import Navbar from '@/app/components/dashboard/Navbar';
 import api from '../../../lib/axios'; 
 
 import ValidationFarmerList from '@/app/components/dashboard/land-validation/ValidationFarmerList';
@@ -275,9 +274,6 @@ const handleSaveMapping = async (
 
 return (
   <div className="min-h-screen bg-[#f8fafc] text-zinc-800 antialiased font-sans pb-12">
-    <Navbar adminName={adminName} roleName="admin-lapangan" handleLogout={() => router.push('/auth/login')} />
-
-    <div className="max-w-8xl mx-auto px-4 sm:px-6 lg:px-13 mt-6">
       {/* TOPBAR HEADER */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div className="flex items-center gap-3">
@@ -316,49 +312,49 @@ return (
           />
         </div>
 
-{/* PANEL KANAN: WORKSPACE AREA */}
-<div className="lg:col-span-7">
-  {selectedFarmer && selectedLand ? (
-    <div className="flex flex-col space-y-4 bg-white border p-6 shadow-sm  border-zinc-100 rounded-2xl">
-      <ValidationForm 
-        selectedFarmer={selectedFarmer}
-        selectedLand={selectedLand}
-        areaHectares={areaHectares}
-        setAreaHectares={setAreaHectares}
-        plantingDate={plantingDate}
-        setPlantingDate={setPlantingDate}
-        onSubmit={handleSaveMapping}
-        onCancel={() => { setSelectedFarmer(null); setSelectedLand(null); setPolygonCoordinates([]); }}
-        
-        mapWorkspaceComponent={
-          <MapWorkspace 
-            onPolygonChange={handlePolygonUpdate} 
-            initialPolygon={polygonCoordinates} 
-            allFarmersData={farmers} 
-            selectedLandId={selectedLand?.id || null} 
-            selectedLandData={selectedLand}
-            onSelectLandDirectly={handleSelectLandForMapping}
-            activeTab={activeTab} 
-            calculatedAreaText={areaHectares}
-            onTriggerReMapping={() => {
-              isReMappingRef.current = true; 
-              setActiveTab('belum');        
-            }}
-            onSave={handleSaveMapping}
-            onCancel={() => { setSelectedFarmer(null); setSelectedLand(null); setPolygonCoordinates([]); }}
-          />
-        }
-      />
-    </div>
-  ) : (
-    /* State Kosong saat belum pilih data lahan */
-    <div className="w-full rounded-2xl bg-white shadow-sm p-8.5 min-h-[400px] flex items-center justify-center text-center">
-      <EmptyValidationState />
-    </div>
-  )}
-</div>
+        {/* PANEL KANAN: WORKSPACE AREA */}
+        <div className="lg:col-span-7">
+          {selectedFarmer && selectedLand ? (
+            <div className="flex flex-col space-y-4 bg-white border p-6 shadow-sm  border-zinc-100 rounded-2xl">
+              <ValidationForm 
+                selectedFarmer={selectedFarmer}
+                selectedLand={selectedLand}
+                areaHectares={areaHectares}
+                setAreaHectares={setAreaHectares}
+                plantingDate={plantingDate}
+                setPlantingDate={setPlantingDate}
+                onSubmit={handleSaveMapping}
+                onCancel={() => { setSelectedFarmer(null); setSelectedLand(null); setPolygonCoordinates([]); }}
+                
+                mapWorkspaceComponent={
+                  <MapWorkspace 
+                    onPolygonChange={handlePolygonUpdate} 
+                    initialPolygon={polygonCoordinates} 
+                    allFarmersData={farmers} 
+                    selectedLandId={selectedLand?.id || null} 
+                    selectedLandData={selectedLand}
+                    onSelectLandDirectly={handleSelectLandForMapping}
+                    activeTab={activeTab} 
+                    calculatedAreaText={areaHectares}
+                    onTriggerReMapping={() => {
+                      isReMappingRef.current = true; 
+                      setActiveTab('belum');        
+                    }}
+                    onSave={handleSaveMapping}
+                    onCancel={() => { setSelectedFarmer(null); setSelectedLand(null); setPolygonCoordinates([]); }}
+                  />
+                }
+              />
+            </div>
+          ) : (
+            /* State Kosong saat belum pilih data lahan */
+            <div className="w-full rounded-2xl bg-white shadow-sm p-8.5 min-h-[400px] flex items-center justify-center text-center">
+              <EmptyValidationState />
+            </div>
+          )}
+        </div>
 
-      </div>
+
     </div>
   </div>
 );

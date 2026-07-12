@@ -21,6 +21,11 @@ return new class extends Migration
             $table->string('phone')->nullable()->unique(); 
             $table->text('address')->nullable();        
             
+            $table->foreignId('cooperative_id')
+                  ->nullable()
+                  ->constrained('cooperatives')
+                  ->onDelete('set null');
+            
             $table->rememberToken();
             $table->timestamps();
         });

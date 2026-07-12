@@ -8,7 +8,7 @@ interface ValidationFilterFormProps {
   searchTerm: string;
   setSearchTerm: (val: string) => void;
   uniqueGroups: { id: number; name: string }[];
-  farmers: Farmer[]; // Menerima data farmers dari parent component
+  farmers: Farmer[]; 
   activeTab: 'belum' | 'sudah';
   setActiveTab: (tab: 'belum' | 'sudah') => void;
   onApplyFilters: (filters: {
