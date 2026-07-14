@@ -75,7 +75,7 @@ class InventoryController extends Controller
 
         $suggestedKg = $responseAI['suggested_procurement_kg'];
         $kemasanKg = $fertilizer->packaging_size_kg ?? 50;
-        $jumlahKarung = ceil($suggestedKg / $kemasanKg); // Pembulatan ke atas untuk jumlah karung fisik
+        $jumlahKarung = ceil($suggestedKg / $kemasanKg); 
 
         // Simpan ke workflow pengadaan
         $procurement = Procurement::create([

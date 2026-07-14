@@ -8,14 +8,23 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Fertilizer extends Model
 {
-    protected $fillable = ['warehouse_id', 'name', 'current_stock_kg', 'minimum_stock_kg', 'price_per_kg'];
+    protected $fillable = [
+        'fertilizer_code', 
+        'warehouse_id', 
+        'name', 
+        'image',
+        'packaging_size_kg', 
+        'current_stock_kg', 
+        'minimum_stock_kg', 
+        'price_per_kg', 
+        'status'
+    ];
 
-    // Relasi: Pupuk ini disimpan di Gudang mana
     public function warehouse(): BelongsTo
     {
         return $this->belongsTo(Warehouse::class);
     }
-    // Relasi: Pupuk ini punya banyak rekam jejak keluar masuk
+
     public function mutations(): HasMany
     {
         return $this->hasMany(InventoryMutation::class);

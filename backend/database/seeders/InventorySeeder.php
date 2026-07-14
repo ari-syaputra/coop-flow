@@ -41,21 +41,29 @@ class InventorySeeder extends Seeder
         ]);
 
 
-        // 2. Buat Data Multi-Gudang (Dikaitkan ke Koperasi yang sudah Aktif)
+        // 2. Buat Data Multi-Gudang (Menyesuaikan dengan skema tabel: capacity_ton, address, surface_area, warehouse_type)
         $gudangPusat = Warehouse::create([
             'cooperative_id' => $cooperativeActive->id,
             'name'           => 'Gudang Pusat Klaten',
-            'capacity_kg'    => 100000 // 100 Ton
+            'address'        => 'Jl. Raya Solo - Yogyakarta No.10, Klaten',
+            'surface_area'   => 500.0,
+            'capacity_ton'   => 100,  
+            'warehouse_type' => 'Utama',
+            'facilities'     => json_encode(['Pallet', 'Forklift', 'Suhu Terkontrol'])
         ]);
 
         $gudangCabang = Warehouse::create([
             'cooperative_id' => $cooperativeActive->id,
             'name'           => 'Gudang Cabang Sukamaju',
-            'capacity_kg'    => 50000 // 50 Ton
+            'address'        => 'Dusun Sukamaju RT 02/RW 05, Klaten',
+            'surface_area'   => 250.0,
+            'capacity_ton'   => 50,   
+            'warehouse_type' => 'Cabang',
+            'facilities'     => json_encode(['Pallet', 'Ventilasi Alami'])
         ]);
 
 
-        // 3. Buat Data Master Pupuk & Saldo Stok Awal (Sudah ditambahkan fertilizer_code)
+        // 3. Buat Data Master Pupuk & Saldo Stok Awal
         $dataPupuk = [
             [
                 'fertilizer_code'    => 'FPK-UREA',

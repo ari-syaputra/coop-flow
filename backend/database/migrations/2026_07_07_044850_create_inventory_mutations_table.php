@@ -15,12 +15,11 @@ return new class extends Migration
             $table->id();
             $table->foreignId('fertilizer_id')->constrained('fertilizers')->onDelete('cascade');
             
-            // Hubungan opsional ke tabel farmers buatan temanmu jika tipenya "keluar" untuk tebus pupuk
             $table->foreignId('farmer_id')->nullable()->constrained('farmers')->onDelete('set null');
             
             $table->enum('type', ['masuk', 'keluar']);
             $table->integer('quantity_kg');
-            $table->text('description'); // Nomor surat jalan atau keterangan tebusan
+            $table->text('description'); 
             $table->timestamps();
         });
     }

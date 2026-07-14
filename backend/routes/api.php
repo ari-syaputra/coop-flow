@@ -13,6 +13,7 @@ use App\Http\Controllers\ParcelController;
 use App\Http\Controllers\PlantController;
 use App\Http\Controllers\RegionalController;
 use App\Http\Controllers\TransactionController;  
+use App\Http\Controllers\FertilizerController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -56,6 +57,7 @@ Route::middleware('auth:sanctum')->group(function () {
         // 1. Profil & Dashboard
         Route::put('/profile/complete', [CooperativeController::class, 'updateProfile']);
         Route::get('/dashboard', [CooperativeDashboardController::class, 'getKoperasiData']);
+        Route::apiResource('fertilizers', FertilizerController::class);
         
         // 2. Stok & Inventaris
         Route::prefix('inventory')->group(function () {
@@ -107,13 +109,5 @@ Route::middleware('auth:sanctum')->group(function () {
     
     Route::post('/parcels', [ParcelController::class, 'store']);
     Route::apiResource('plants', PlantController::class);
-
-    // Endpoint data regional (Terproteksi)
-    Route::prefix('regional')->group(function () {
-        Route::get('/provinces', [RegionalController::class, 'getProvinces']);
-        Route::get('/provinces/{province_id}/cities', [RegionalController::class, 'getCities']);
-        Route::get('/cities/{city_id}/districts', [RegionalController::class, 'getDistricts']);
-        Route::get('/districts/{district_id}/villages', [RegionalController::class, 'getVillages']);
-    });
 
 });
