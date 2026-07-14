@@ -17,11 +17,12 @@ class RoleAndUserSeeder extends Seeder
         // 1. Reset Cached Roles dan Permissions bawaan Spatie
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
-        $roleAdminLapangan    = Role::firstOrCreate(['name' => 'admin-lapangan', 'guard_name' => 'web']);
-        $rolePetugasKoperasi  = Role::firstOrCreate(['name' => 'petugas-koperasi', 'guard_name' => 'web']);
-        $roleDinasPertanian   = Role::firstOrCreate(['name' => 'dinas-pertanian', 'guard_name' => 'web']);
-        $roleKemenkoPangan    = Role::firstOrCreate(['name' => 'kemenko-pangan', 'guard_name' => 'web']);
-        $rolePetani           = Role::firstOrCreate(['name' => 'petani', 'guard_name' => 'web']);
+        // 🔒 Ubah guard_name menjadi 'api' agar selaras dengan Model User & SPA API Headless
+        $roleAdminLapangan    = Role::firstOrCreate(['name' => 'admin-lapangan', 'guard_name' => 'api']);
+        $rolePetugasKoperasi  = Role::firstOrCreate(['name' => 'petugas-koperasi', 'guard_name' => 'api']);
+        $roleDinasPertanian   = Role::firstOrCreate(['name' => 'dinas-pertanian', 'guard_name' => 'api']);
+        $roleKemenkoPangan    = Role::firstOrCreate(['name' => 'kemenko-pangan', 'guard_name' => 'api']);
+        $rolePetani           = Role::firstOrCreate(['name' => 'petani', 'guard_name' => 'api']);
 
         // --- Akun Admin Lapangan (Terikat Koperasi Ranjeng) ---
         $adminLapangan = User::firstOrCreate(
@@ -31,7 +32,8 @@ class RoleAndUserSeeder extends Seeder
                 'password' => Hash::make('password123'),
                 'phone' => '081234567890',
                 'address' => 'Kantor Poktan Sleman, Yogyakarta',
-                'cooperative_id' => 1
+                'cooperative_id' => 1,
+                'status' => 'ACTIVE'
             ]
         );
         if (!$adminLapangan->hasRole($roleAdminLapangan)) {
@@ -46,7 +48,8 @@ class RoleAndUserSeeder extends Seeder
                 'password' => Hash::make('password123'),
                 'phone' => '081234567891',
                 'address' => 'Koperasi Unit Desa (KUD) Makmur Sejahtera',
-                'cooperative_id' => 1
+                'cooperative_id' => 1,
+                'status' => 'PENDING'
             ]
         );
         if (!$petugasKoperasi->hasRole($rolePetugasKoperasi)) {

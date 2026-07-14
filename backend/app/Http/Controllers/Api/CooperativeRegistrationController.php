@@ -134,14 +134,15 @@ class CooperativeRegistrationController extends Controller
     public function getPendingRegistrations()
     {
         // Mengambil data user pending beserta relasi koperasi dan gudangnya
-        $pendingData = User::where('status', 'PENDING')
-            ->with(['cooperative.warehouses'])
-            ->get();
+        $pendingKoperasi = User::role('petugas-koperasi')
+        ->where('status', 'PENDING')
+        ->with('cooperative')
+        ->get();
 
         return response()->json([
-            'success' => true,
-            'data'    => $pendingData
-        ], 200);
+        'success' => true,
+        'data' => $pendingKoperasi
+    ], 200);
     }
 
     /**
