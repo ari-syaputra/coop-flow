@@ -41,25 +41,33 @@ class InventorySeeder extends Seeder
         ]);
 
 
-        // 2. Buat Data Multi-Gudang (Dikaitkan ke Koperasi yang sudah Aktif)
+        // 2. Buat Data Multi-Gudang (Dihubungkan ke Koperasi Aktif & disimpan ke variabel yang benar)
         $gudangPusat = Warehouse::create([
-            'cooperative_id' => $cooperativeActive->id,
+            'cooperative_id' => $cooperativeActive->id, // 👈 Diperbaiki dari $cooperative
             'name'           => 'Gudang Pusat Klaten',
-            'capacity_kg'    => 100000 // 100 Ton
+            'capacity_ton'   => 100,                     // 👈 Diperbaiki dari capacity_kg
+            'address'        => 'Jl. Pemuda No. 12, Klaten Tengah', 
+            'warehouse_type' => 'Gudang Utama',
+            'surface_area'   => 400,
+            'facilities'     => ['CCTV', 'Pallet', 'Timbangan Digital']
         ]);
 
         $gudangCabang = Warehouse::create([
             'cooperative_id' => $cooperativeActive->id,
-            'name'           => 'Gudang Cabang Sukamaju',
-            'capacity_kg'    => 50000 // 50 Ton
+            'name'           => 'Gudang Pembantu Cabang',
+            'capacity_ton'   => 50,
+            'address'        => 'Jl. Raya Lintas Desa No. 89, Ranjeng', 
+            'warehouse_type' => 'Gudang Pembantu',
+            'surface_area'   => 200,
+            'facilities'     => ['CCTV', 'Ventilasi']
         ]);
 
 
-        // 3. Buat Data Master Pupuk & Saldo Stok Awal (Sudah ditambahkan fertilizer_code)
+        // 3. Buat Data Master Pupuk & Saldo Stok Awal (Sudah terhubung ke variabel $gudangPusat & $gudangCabang)
         $dataPupuk = [
             [
                 'fertilizer_code'    => 'FPK-UREA',
-                'warehouse_id'       => $gudangPusat->id,
+                'warehouse_id'       => $gudangPusat->id, // 👈 Aman, variable terdefinisi
                 'name'               => 'Urea',
                 'current_stock_kg'   => 45250,
                 'minimum_stock_kg'   => 20000,
@@ -83,7 +91,7 @@ class InventorySeeder extends Seeder
             ],
             [
                 'fertilizer_code'    => 'FPK-SP36',
-                'warehouse_id'       => $gudangCabang->id,
+                'warehouse_id'       => $gudangCabang->id, // 👈 Aman, variable terdefinisi
                 'name'               => 'SP-36',
                 'current_stock_kg'   => 8500,
                 'minimum_stock_kg'   => 5000,
