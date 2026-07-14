@@ -16,65 +16,47 @@ class FertilizerController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            // Hanya role 'petugas-koperasi' yang bisa melakukan store, update, dan destroy
             new Middleware('role:petugas-koperasi', only: ['store', 'update', 'destroy']),
         ];
     }
 
-    /**
-     * Display a listing of the resource (READ ALL).
-     * Bisa diakses oleh semua user terautentikasi (Sanctum)
-     */
-    public function index()
-    {
-        $fertilizers = Fertilizer::with('warehouse')->get();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Daftar data pupuk berhasil diambil.',
-            'data'    => $fertilizers
-        ], 200);
-    }
+        $roleAdminLapangan    = Role::firstOrCreate(['name' => 'admin-lapangan', 'guard_name' => 'api']);
+        $rolePetugasKoperasi  = Role::firstOrCreate(['name' => 'petugas-koperasi', 'guard_name' => 'api']);
+        $roleDinasPertanian   = Role::firstOrCreate(['name' => 'dinas-pertanian', 'guard_name' => 'api']);
+        $roleKemenkoPangan    = Role::firstOrCreate(['name' => 'kemenko-pangan', 'guard_name' => 'api']);
+        $rolePetani           = Role::firstOrCreate(['name' => 'petani', 'guard_name' => 'api']);
 
-    /**
-     * Store a newly created resource in storage (CREATE).
-     * HANYA PETUGAS KOPERASI
-     */
-    public function store(Request $request)
-    {
-        // 1. Validasi Input (Batas 5MB untuk image)
-        $request->validate([
-            'fertilizer_code'   => 'required|string|unique:fertilizers,fertilizer_code',
-            'warehouse_id'      => 'required|exists:warehouses,id',
-            'name'              => 'required|string|max:255',
-            'packaging_size_kg' => 'nullable|integer|min:1',
-            'current_stock_kg'  => 'nullable|integer|min:0',
-            'minimum_stock_kg'  => 'nullable|integer|min:0',
-            'price_per_kg'      => 'required|integer|min:0',
-            'image'             => 'nullable|image|mimes:jpeg,png,jpg|max:5120', 
-        ]);
-
-        $data = $request->only([
-            'fertilizer_code', 'warehouse_id', 'name', 
-            'packaging_size_kg', 'current_stock_kg', 'minimum_stock_kg', 'price_per_kg'
-        ]);
-
-        // 2. Logika Upload Gambar
-        if ($request->hasFile('image')) {
-            $path = $request->file('image')->store('fertilizers', 'public');
-            $data['image'] = Storage::url($path);
+        // --- Akun Admin Lapangan (Terikat Koperasi Ranjeng) ---
+        $adminLapangan = User::firstOrCreate(
+            ['email' => 'admin.lapangan@coopflow.id'],
+            [
+                'name' => 'Budi Setiawan (Admin Lapangan)',
+                'password' => Hash::make('password123'),
+                'phone' => '081234567890',
+                'address' => 'Kantor Poktan Sleman, Yogyakarta',
+                'cooperative_id' => 1,
+                'status' => 'ACTIVE'
+            ]
+        );
+        if (!$adminLapangan->hasRole($roleAdminLapangan)) {
+            $adminLapangan->assignRole($roleAdminLapangan);
         }
 
-        // 3. Otomatisasi Status Berdasarkan Stok
-        $current = $request->input('current_stock_kg', 0);
-        $min = $request->input('minimum_stock_kg', 1000);
-        
-        if ($current <= 0) {
-            $data['status'] = 'habis';
-        } elseif ($current <= $min) {
-            $data['status'] = 'menipis';
-        } else {
-            $data['status'] = 'tersedia';
+        // --- Akun Petugas Koperasi (Terikat Koperasi Ranjeng) ---
+        $petugasKoperasi = User::firstOrCreate(
+            ['email' => 'koperasi@coopflow.id'],
+            [
+                'name' => 'Siti Aminah (Petugas Koperasi)',
+                'password' => Hash::make('password123'),
+                'phone' => '081234567891',
+                'address' => 'Koperasi Unit Desa (KUD) Makmur Sejahtera',
+                'cooperative_id' => 1,
+                'status' => 'PENDING'
+            ]
+        );
+        if (!$petugasKoperasi->hasRole($rolePetugasKoperasi)) {
+            $petugasKoperasi->assignRole($rolePetugasKoperasi);
         }
 
         // 4. Simpan ke Database
