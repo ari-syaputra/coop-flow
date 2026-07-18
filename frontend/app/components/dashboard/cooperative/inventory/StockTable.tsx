@@ -110,12 +110,12 @@ export default function StockTable({ stocks, refreshData }: StockTableProps) {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col h-full space-y-4">
       {/* BARIS UTAMA: TOMBOL TAMBAH PUPUK */}
       <div className="flex justify-end">
         <button
           onClick={() => setIsAddModalOpen(true)} 
-          className="bg-[#00b56c] hover:bg-emerald-600 text-white cursor-pointer px-4 py-2.5 rounded-lg text-sm font-semibold shadow-sm flex items-center gap-2 transition-all"
+          className="bg-[#23a038] cursor-pointer hover:bg-green-700 text-white px-4 py-2.5 rounded-lg text-sm font-semibold shadow-sm flex items-center gap-2 transition-all"
         >
           <FaPlus className="text-xs" />
           <span>Tambah Pupuk</span>
@@ -143,8 +143,8 @@ export default function StockTable({ stocks, refreshData }: StockTableProps) {
       </div>
 
       {/* TABEL UTAMA */}
-      <div className="w-full overflow-hidden">
-        <div className="overflow-x-auto">
+    <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+      <div className="overflow-auto flex-1">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b-2 border-t-2 border-zinc-200 text-zinc-700 text-sm font-semibold">

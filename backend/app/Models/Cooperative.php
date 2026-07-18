@@ -58,4 +58,8 @@ class Cooperative extends Model
     {
         return $this->hasMany(User::class);
     }
+
+    public function aiPredictions() {
+        return $this->hasMany(AiPrediction::class);
+    }
 }

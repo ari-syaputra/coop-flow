@@ -79,4 +79,9 @@ class Land extends Model
     {
         return $this->belongsTo(\Laravolt\Indonesia\Models\Village::class, 'village_id', 'code');
     }
+
+    public function mlLogs(): HasMany
+    {
+        return $this->hasMany(TransactionMlLog::class);
+    }
 }

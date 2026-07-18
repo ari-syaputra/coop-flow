@@ -12,8 +12,9 @@ use App\Http\Controllers\LaporanController;
 use App\Http\Controllers\ParcelController;
 use App\Http\Controllers\PlantController;
 use App\Http\Controllers\RegionalController;
-use App\Http\Controllers\TransactionController;  
 use App\Http\Controllers\FertilizerController;
+use App\Http\Controllers\Api\TransactionController;
+use App\Http\Controllers\ProcurementOrderController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -65,10 +66,18 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::prefix('inventory')->group(function () {
             // FertilizerController 
             Route::get('/overview', [FertilizerController::class, 'getOverview']);
-            Route::post('/request-procurement-ml', [FertilizerController::class, 'requestProcurementAI']);
+            Route::post('/fertilizers/predict-all', [FertilizerController::class, 'requestAllProcurementAI']);
             
             Route::get('/history', [InventoryController::class, 'getMutationHistory']);
             Route::post('/mutation', [InventoryController::class, 'storeMutation']);
+        });
+
+        // Manage pengedaan hasil prediksi kebutuhan ML
+        Route::prefix('procurement')->group(function () {
+            Route::get('/', [ProcurementOrderController::class, 'index']);      
+            Route::get('/{id}', [ProcurementOrderController::class, 'show']);
+            Route::post('/', [ProcurementOrderController::class, 'store']); 
+            Route::post('/{id}/complete', [ProcurementOrderController::class, 'completeOrder']); 
         });
     
 
@@ -80,8 +89,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // 4. Penyaluran (Transaksi)
         Route::prefix('transaction')->group(function () {
-            Route::post('/check-recommendation', [TransactionController::class, 'checkRecommendation']);
-            Route::post('/store', [TransactionController::class, 'storeTransaction']);
+            Route::get('/transactionsfix', [TransactionController::class, 'index']);      
+            Route::get('/transactionsfix/{id}', [TransactionController::class, 'show']);  
+            Route::post('/transactionsfix', [TransactionController::class, 'store']);
         });
 
         // 5. Laporan
@@ -100,6 +110,21 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/pending', [CooperativeRegistrationController::class, 'getPendingRegistrations']);
         Route::post('/{id}/approve', [CooperativeRegistrationController::class, 'approve']);
         Route::post('/{id}/reject', [CooperativeRegistrationController::class, 'reject']);
+    });
+
+    Route::post('/procurement/{id}/approve-quota', [ProcurementOrderController::class, 'approveByKemenko']); 
+    Route::post('/procurement/{id}/dispatch-truck', [ProcurementOrderController::class, 'dispatchShipmentByKemenko']); 
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Modul Otoritas Dinas Pertanian Kabupaten/Kota
+    |--------------------------------------------------------------------------
+    */
+    Route::prefix('dinas')->group(function () {
+        Route::post('/procurement/{id}/verify', [ProcurementOrderController::class, 'verifyByDinas']); 
+        Route::post('/procurement/{id}/arrived-lini3', [ProcurementOrderController::class, 'updateToLiniTiga']); 
+        Route::post('/procurement/{id}/release-lini4', [ProcurementOrderController::class, 'releaseToLiniEmpat']); 
     });
 
     /*

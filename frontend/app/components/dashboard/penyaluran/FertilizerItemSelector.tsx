@@ -1,21 +1,36 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { CustomFertilizerItem } from "./LandPredictionCard";
 import FertilizerSwapModal from "./FertilizerSwapModal"; 
 import { FaLightbulb, FaBox, FaPlus, FaMinus, FaExchangeAlt, FaCheck, FaShoppingBag } from "react-icons/fa";
 
+export interface SelectedBagItem {
+  bagKey: string;
+  index: number;
+  fertilizerCode: string;
+  weightKg: number;
+  isChecked: boolean;
+  details: CustomFertilizerItem;
+}
+
 interface FertilizerItemSelectorProps {
   recommendations: CustomFertilizerItem[];
-  onSelectionChange: (summary: { totalBags: number; totalCost: number; totalKg: number }) => void;
+  onSelectionChange: (summary: { 
+    totalBags: number; 
+    totalCost: number; 
+    totalKg: number;
+    selectedItems: SelectedBagItem[];
+  }) => void;
 }
 
 interface BagState {
   key: string;      
-  index: number;       
+  index: number;      
   isChecked: boolean;
   selectedType: string; 
   weightKg: number;    
+  fertilizer_id?: number | null; // Amankan ID dari Backend di level state karung
   customDetails?: CustomFertilizerItem; 
 }
 
@@ -23,6 +38,8 @@ export default function FertilizerItemSelector({ recommendations, onSelectionCha
   const [activeItemIndex, setActiveItemIndex] = useState<number>(0);
   const [bags, setBags] = useState<BagState[]>([]);
   const [targetBagKey, setTargetBagKey] = useState<string | null>(null);
+  
+  const prevRecommendationsRef = useRef<CustomFertilizerItem[]>(recommendations);
 
   const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
   const currentActiveItem = recommendations[activeItemIndex];
@@ -41,26 +58,54 @@ export default function FertilizerItemSelector({ recommendations, onSelectionCha
     let totalCostChecked = 0;
     let totalBagsChecked = 0;
     let totalKgChecked = 0;
+    const selectedItems: SelectedBagItem[] = [];
 
     currentBags.forEach(bag => {
-      if (bag.isChecked) {
-        const details = getFertilizerDetails(bag);
-        const actualBagPrice = Math.round(details.price_per_kg * bag.weightKg);
+      const details = getFertilizerDetails(bag);
+      
+      // Inject kembali fertilizer_id ke dalam details jika hilang di tengah jalan
+      const resolvedDetails = {
+        ...details,
+        fertilizer_id: bag.fertilizer_id || details.fertilizer_id || (details as any).id || null
+      };
 
+      selectedItems.push({
+        bagKey: bag.key,
+        index: bag.index,
+        fertilizerCode: bag.selectedType,
+        weightKg: bag.weightKg,
+        isChecked: bag.isChecked,
+        details: resolvedDetails
+      });
+
+      if (bag.isChecked) {
+        const actualBagPrice = Math.round(details.price_per_kg * bag.weightKg);
         totalCostChecked += actualBagPrice;
         totalBagsChecked += 1;
         totalKgChecked += bag.weightKg;
       }
     });
 
-    return { totalBags: totalBagsChecked, totalCost: totalCostChecked, totalKg: totalKgChecked };
+    return { 
+      totalBags: totalBagsChecked, 
+      totalCost: totalCostChecked, 
+      totalKg: totalKgChecked,
+      selectedItems 
+    };
   };
 
+  // Inisialisasi awal saat rekomendasi baru pertama kali masuk
   useEffect(() => {
-    if (currentActiveItem) {
-      const initialBagsCount = currentActiveItem.jumlah_karung || 1;
-      const cleanName = currentActiveItem.fertilizer_code || "NPK"; 
-      const weightPerBag = currentActiveItem.packaging_size_kg || 50;
+    const isRecommendationsChanged = JSON.stringify(prevRecommendationsRef.current) !== JSON.stringify(recommendations);
+    
+    if (recommendations.length > 0 && (bags.length === 0 || isRecommendationsChanged)) {
+      prevRecommendationsRef.current = recommendations;
+      
+      const defaultItem = recommendations[0];
+      const initialBagsCount = defaultItem.jumlah_karung || 1;
+      const cleanName = defaultItem.fertilizer_code || "NPK"; 
+      const weightPerBag = defaultItem.packaging_size_kg || 50;
+      const fId = defaultItem.fertilizer_id || (defaultItem as any).id || null;
 
       const initialBags: BagState[] = Array.from({ length: initialBagsCount }).map((_, idx) => ({
         key: `bag-${idx + 1}`,
@@ -68,13 +113,45 @@ export default function FertilizerItemSelector({ recommendations, onSelectionCha
         isChecked: true,
         selectedType: cleanName,
         weightKg: weightPerBag,
-        customDetails: currentActiveItem, 
+        fertilizer_id: fId ? Number(fId) : null, // Amankan ID disini
+        customDetails: defaultItem, 
       }));
 
       setBags(initialBags);
+      setActiveItemIndex(0); // Reset ke tab pertama
       onSelectionChange(getSummary(initialBags));
     }
-  }, [activeItemIndex, recommendations]);
+  }, [recommendations]);
+
+  // Ganti tab kemasan otomatis menghitung ulang jumlah karung sesuai prediksi dosis AI
+  const handleActiveItemChange = (idx: number) => {
+    setActiveItemIndex(idx);
+    const targetRecommendation = recommendations[idx];
+    
+    // Ambil target prediksi dosis AI (contoh: 100 Kg)
+    const targetRecommendedKg = targetRecommendation.original_recommended_kg || 50;
+    
+    // Ambil kapasitas kemasan yang baru dipilih (contoh: 20 Kg atau 50 Kg)
+    const newWeightPerBag = targetRecommendation.packaging_size_kg || 50;
+    
+    // Hitung jumlah karung yang dibutuhkan secara otomatis (pembulatan ke atas)
+    const calculatedBagsCount = Math.ceil(targetRecommendedKg / newWeightPerBag);
+    const fId = targetRecommendation.fertilizer_id || (targetRecommendation as any).id || null;
+
+    // Generate ulang struktur karung yang baru
+    const updatedBags: BagState[] = Array.from({ length: calculatedBagsCount }).map((_, index) => ({
+      key: `bag-${index + 1}-${Date.now()}`, // Gunakan unique key baru agar state visual ter-reset dengan mulus
+      index: index + 1,
+      isChecked: true,
+      selectedType: targetRecommendation.fertilizer_code,
+      weightKg: newWeightPerBag,
+      fertilizer_id: fId ? Number(fId) : null, // Amankan ID di sini
+      customDetails: targetRecommendation
+    }));
+
+    setBags(updatedBags);
+    onSelectionChange(getSummary(updatedBags));
+  };
 
   const handleToggleBag = (key: string) => {
     const updated = bags.map(bag => bag.key === key ? { ...bag, isChecked: !bag.isChecked } : bag);
@@ -83,13 +160,18 @@ export default function FertilizerItemSelector({ recommendations, onSelectionCha
   };
 
   const handleSwapFertilizerType = (bagKey: string, fertilizerItem: CustomFertilizerItem) => {
+    const fId = fertilizerItem.fertilizer_id || (fertilizerItem as any).id || null;
     const updated = bags.map(bag => {
       if (bag.key === bagKey) {
         return { 
           ...bag, 
           selectedType: fertilizerItem.fertilizer_code,
           weightKg: fertilizerItem.packaging_size_kg || 50,
-          customDetails: fertilizerItem
+          fertilizer_id: fId ? Number(fId) : null, // Amankan ID saat diswap!
+          customDetails: {
+            ...fertilizerItem,
+            packaging_size_kg: fertilizerItem.packaging_size_kg || 50
+          }
         };
       }
       return bag;
@@ -102,6 +184,7 @@ export default function FertilizerItemSelector({ recommendations, onSelectionCha
   const handleAddBag = () => {
     const defaultType = currentActiveItem?.fertilizer_code || "NPK";
     const defaultWeight = currentActiveItem?.packaging_size_kg || 50;
+    const fId = currentActiveItem?.fertilizer_id || (currentActiveItem as any).id || null;
     
     const newBag: BagState = {
       key: `bag-${Date.now()}-${bags.length + 1}`,
@@ -109,6 +192,7 @@ export default function FertilizerItemSelector({ recommendations, onSelectionCha
       isChecked: true,
       selectedType: defaultType,
       weightKg: defaultWeight,
+      fertilizer_id: fId ? Number(fId) : null, // Amankan ID saat karung baru ditambahkan!
       customDetails: currentActiveItem,
     };
     
@@ -140,7 +224,6 @@ export default function FertilizerItemSelector({ recommendations, onSelectionCha
 
   return (
     <div className="space-y-4">
-      
       {/* 1. HIGHLIGHT DOSIS REKOMENDASI UTAMA */}
       <div className="w-full bg-emerald-50/60 border border-emerald-100 p-4 rounded-xl flex items-start gap-3 text-xs shadow-xs">
         <div className="text-emerald-700 mt-0.5">
@@ -164,7 +247,7 @@ export default function FertilizerItemSelector({ recommendations, onSelectionCha
             {recommendations.map((item, idx) => (
               <button
                 key={item.id || idx}
-                onClick={() => setActiveItemIndex(idx)}
+                onClick={() => handleActiveItemChange(idx)}
                 className={`px-3.5 py-1.5 rounded-full font-bold text-[11px] border transition-all ${
                   activeItemIndex === idx
                     ? "bg-emerald-600 border-emerald-600 text-white shadow-xs"
@@ -224,14 +307,13 @@ export default function FertilizerItemSelector({ recommendations, onSelectionCha
 
           const actualPrice = Math.round(matchedDetails.price_per_kg * bag.weightKg);
 
-          // Cek apakah karung diubah dari rekomendasi dasar AI
           const isUserModified = 
             !bag.isChecked || 
             bag.weightKg !== matchedDetails.original_recommended_kg / matchedDetails.original_recommended_bags ||
             bag.selectedType !== recommendations[activeItemIndex]?.fertilizer_code;
 
           return (
-            <div key={bag.key} className={`w-full flex flex-col gap-3 p-3 rounded-xl border transition-all text-xs bg-white shadow-2xs ${isUserModified && bag.isChecked ? "border-amber-300 bg-amber-550/5" : "border-gray-250"}`}>
+            <div key={bag.key} className={`w-full flex flex-col gap-3 p-3 rounded-xl border transition-all text-xs bg-white shadow-2xs ${isUserModified && bag.isChecked ? "border-amber-300 bg-amber-50" : "border-gray-250"}`}>
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2.5 min-w-0">
                   <div 
@@ -340,7 +422,6 @@ export default function FertilizerItemSelector({ recommendations, onSelectionCha
           }
         }}
       />
-
     </div>
   );
 }

@@ -3,23 +3,32 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Transaction extends Model
 {
     protected $fillable = [
-        'transaction_no', 'farmer_id', 'total_items', 
-        'total_weight_kg', 'total_price', 'payment_method', 'amount_paid'
+        'farmer_id',
+        'payment_method',
+        'amount_paid'
     ];
 
+    // Relasi ke Petani (User)
+    public function farmer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'farmer_id');
+    }
+
+    // Relasi ke item pembelian
     public function items(): HasMany
     {
         return $this->hasMany(TransactionItem::class);
     }
 
-    public function farmer(): BelongsTo
+    // Relasi ke log ML yang merekam kondisi transaksi ini
+    public function mlLogs(): HasMany
     {
-        return $this->belongsTo(Farmer::class);
+        return $this->hasMany(TransactionMlLog::class);
     }
 }

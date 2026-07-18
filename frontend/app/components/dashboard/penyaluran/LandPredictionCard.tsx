@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Land } from "@/app/types/farmer";
 import api from "@/app/lib/axios";
-import FertilizerItemSelector from "./FertilizerItemSelector";
+import FertilizerItemSelector, { SelectedBagItem } from "./FertilizerItemSelector";
 import { FaMapMarkedAlt, FaChevronDown, FaChevronUp, FaExclamationTriangle, FaChartBar } from "react-icons/fa";
 
 export interface FertilizerAnalysisMeta {
@@ -32,96 +32,216 @@ export interface CustomFertilizerItem {
   analysis_meta?: FertilizerAnalysisMeta;
 }
 
+interface Village {
+  name: string;
+  meta?: {
+    lat?: string;
+    long?: string;
+  };
+}
+
+export interface CustomizedBagOutput {
+  bagKey: string;
+  fertilizer_code: string;
+  nama: string;
+  weightKg: number;
+  price_per_kg: number;
+  subtotal: number;
+  isChecked: boolean;
+  image_url: string | null;
+  fertilizer_id?: number; // Wajib ter-eksport di interface output ini
+}
+
 interface LandPredictionCardProps {
   land: Land;
   village?: Village;
-  onLandSummaryChange: (landId: string, summary: { totalBags: number; totalCost: number; totalKg: number }) => void;
+  onLandSummaryChange: (
+    landId: string, 
+    summary: { 
+      totalBags: number; 
+      totalCost: number; 
+      totalKg: number; 
+      rawItems: CustomFertilizerItem[]; 
+      customizedBags?: CustomizedBagOutput[]; 
+    }
+  ) => void;
+  initialCustomBags?: CustomizedBagOutput[];
+  initialSummary?: {
+    totalBags: number;
+    totalCost: number;
+    totalKg: number;
+  };
 }
 
-export default function LandPredictionCard({ land, village, onLandSummaryChange }: LandPredictionCardProps) {
+export default function LandPredictionCard({ 
+  land, 
+  village, 
+  onLandSummaryChange,
+  initialCustomBags,
+  initialSummary
+}: LandPredictionCardProps) {
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [recommendations, setRecommendations] = useState<CustomFertilizerItem[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [hasLoaded, setHasLoaded] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   
-  const [currentSummary, setCurrentSummary] = useState({ totalBags: 0, totalCost: 0, totalKg: 0 });
+  const [currentSummary, setCurrentSummary] = useState({ 
+    totalBags: initialSummary?.totalBags || 0, 
+    totalCost: initialSummary?.totalCost || 0, 
+    totalKg: initialSummary?.totalKg || 0 
+  });
+  const [customBags, setCustomBags] = useState<CustomizedBagOutput[]>(initialCustomBags || []);
 
-const fetchRecommendations = async () => {
-  setLoading(true);
-  setError(null);
-  try {
-    const response = await api.post(`/farmers/lands/${land.id}/fertilizer-recommendation`);
-    const results: CustomFertilizerItem[] = response.data?.data?.recommendations || [];
-    setRecommendations(results);
-    setHasLoaded(true);
-    
-    if (results.length > 0) {
-      const totalBags = results.reduce((acc, c) => acc + c.jumlah_karung, 0);
-      const totalKg = results.reduce((acc, c) => acc + (c.jumlah_karung * c.packaging_size_kg), 0);
-      const totalCost = results.reduce((acc, c) => acc + Math.round(c.price_per_kg * (c.jumlah_karung * c.packaging_size_kg)), 0);
-      
-      const defaultSummary = { totalBags, totalCost, totalKg, rawItems: results };
-      setCurrentSummary(defaultSummary);
-      onLandSummaryChange(String(land.id), defaultSummary);
+  useEffect(() => {
+    if (initialSummary) {
+      setCurrentSummary(initialSummary);
     }
-  } catch (err: any) {
-    setError(err.response?.data?.message || "Gagal memproses prediksi.");
-    onLandSummaryChange(String(land.id), { totalBags: 0, totalCost: 0, totalKg: 0, rawItems: [] });
-  } finally {
-    setLoading(false);
-  }
-};
+    if (initialCustomBags) {
+      setCustomBags(initialCustomBags);
+    }
+  }, [initialSummary, initialCustomBags]);
+
+  const fetchRecommendations = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await api.post(`/farmers/lands/${land.id}/fertilizer-recommendation`);
+      const results: CustomFertilizerItem[] = response.data?.data?.recommendations || [];
+      setRecommendations(results);
+      setHasLoaded(true);
+      
+      if (initialSummary && initialCustomBags && initialCustomBags.length > 0) {
+        onLandSummaryChange(String(land.id), {
+          ...initialSummary,
+          rawItems: results,
+          customizedBags: initialCustomBags
+        });
+      } else {
+        const activeItem = results[0];
+        if (activeItem) {
+          const initialBags = activeItem.jumlah_karung || 1;
+          const initialKg = (activeItem.packaging_size_kg || 50) * initialBags;
+          const initialCost = Math.round(activeItem.price_per_kg * initialKg);
+          
+          const defaultSummary = { totalBags: initialBags, totalCost: initialCost, totalKg: initialKg };
+          setCurrentSummary(defaultSummary);
+          
+          // PERBAIKAN: Ambil secara ketat id database pupuk (fertilizer_id)
+          const defaultFertId = activeItem.fertilizer_id || (activeItem as any).fertilizer?.id || null;
+
+          const defaultCustomBags: CustomizedBagOutput[] = Array.from({ length: initialBags }).map((_, idx) => ({
+            bagKey: `bag-${idx + 1}`,
+            fertilizer_code: activeItem.fertilizer_code,
+            nama: activeItem.nama,
+            weightKg: activeItem.packaging_size_kg || 50,
+            price_per_kg: activeItem.price_per_kg,
+            subtotal: Math.round(activeItem.price_per_kg * (activeItem.packaging_size_kg || 50)),
+            isChecked: true,
+            image_url: activeItem.image_url || (activeItem as any).image || null,
+            fertilizer_id: defaultFertId && !isNaN(Number(defaultFertId)) ? Number(defaultFertId) : undefined 
+          }));
+          setCustomBags(defaultCustomBags);
+          
+          onLandSummaryChange(String(land.id), { 
+            ...defaultSummary, 
+            rawItems: results,
+            customizedBags: defaultCustomBags
+          });
+        }
+      }
+    } catch (err: any) {
+      console.error(`Gagal mendapatkan rekomendasi untuk lahan ID ${land.id}:`, err);
+      setError(err.response?.data?.message || "Gagal memproses prediksi.");
+      onLandSummaryChange(String(land.id), { totalBags: 0, totalCost: 0, totalKg: 0, rawItems: [], customizedBags: [] });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const togglePrediction = async () => {
     if (isOpen) {
       setIsOpen(false);
-      onLandSummaryChange(String(land.id), { totalBags: 0, totalCost: 0, totalKg: 0 });
+      onLandSummaryChange(String(land.id), { totalBags: 0, totalCost: 0, totalKg: 0, rawItems: [], customizedBags: [] });
       return;
     }
 
     setIsOpen(true);
     if (hasLoaded) {
-      onLandSummaryChange(String(land.id), currentSummary);
+      onLandSummaryChange(String(land.id), { 
+        ...currentSummary, 
+        rawItems: recommendations,
+        customizedBags: customBags
+      });
       return;
     }
     await fetchRecommendations();
   };
 
-const handleSelectorChange = (summary: { totalBags: number; totalCost: number; totalKg: number; selectedItems?: any[] }) => {
-  const updatedSummary = { ...summary, rawItems: summary.selectedItems || recommendations };
-  setCurrentSummary(updatedSummary);
-  onLandSummaryChange(String(land.id), updatedSummary);
-};
+  const handleSelectorChange = (summary: { 
+    totalBags: number; 
+    totalCost: number; 
+    totalKg: number;
+    selectedItems: SelectedBagItem[];
+  }) => {
+    const formattedBags: CustomizedBagOutput[] = summary.selectedItems.map(item => {
+      // PERBAIKAN: Ambil fertilizer_id dari details (referensi database), hindari mengambil item.bagKey yang bertipe string
+      const parentFertId = item.details.fertilizer_id || (item.details as any).fertilizer?.id || null;
+      
+      return {
+        bagKey: item.bagKey,
+        fertilizer_code: item.fertilizerCode,
+        nama: item.details.nama,
+        weightKg: item.weightKg,
+        price_per_kg: item.details.price_per_kg,
+        subtotal: Math.round(item.details.price_per_kg * item.weightKg),
+        isChecked: item.isChecked,
+        image_url: item.details.image_url || (item.details as any).image || null,
+        packaging_size_kg: item.details.packaging_size_kg || 50,
+        fertilizer_id: parentFertId && !isNaN(Number(parentFertId)) ? Number(parentFertId) : undefined
+      };
+    });
+
+    setCurrentSummary({
+      totalBags: summary.totalBags,
+      totalCost: summary.totalCost,
+      totalKg: summary.totalKg
+    });
+    setCustomBags(formattedBags);
+
+    onLandSummaryChange(String(land.id), { 
+      totalBags: summary.totalBags,
+      totalCost: summary.totalCost,
+      totalKg: summary.totalKg,
+      rawItems: recommendations,
+      customizedBags: formattedBags
+    });
+  };
 
   const activeMeta = recommendations.find((item) => item.analysis_meta)?.analysis_meta;
 
   return (
     <div className={`w-full border rounded-lg p-5 transition-all duration-200 ${isOpen ? "border-emerald-500 bg-white shadow-md" : "border-gray-200 bg-gray-50/50 hover:bg-gray-50"}`}>
-      
-     {/* Header Lahan */}
-    <div className="flex justify-between items-center cursor-pointer select-none" onClick={togglePrediction}>
-      <div className="flex gap-3 items-center">
-        <div className="w-10 h-10 rounded-lg bg-emerald-800 text-white flex items-center justify-center text-lg shadow-sm">
-          <FaMapMarkedAlt className="w-5 h-5" />
+      {/* Header Lahan */}
+      <div className="flex justify-between items-center cursor-pointer select-none" onClick={togglePrediction}>
+        <div className="flex gap-3 items-center">
+          <div className="w-10 h-10 rounded-lg bg-emerald-800 text-white flex items-center justify-center text-lg shadow-sm">
+            <FaMapMarkedAlt className="w-5 h-5" />
+          </div>
+          <div>
+            <h5 className="font-bold text-sm text-gray-800">{land.land_name}</h5>
+            <p className="text-xs text-gray-500 font-medium">
+              Desa {village?.name || land.village?.name || "-"} 
+              <span className="text-gray-400 font-normal ml-2">
+                ({village?.meta?.lat || land.village?.meta?.lat || land.center_latitude || "0"}, {village?.meta?.long || land.village?.meta?.long || land.center_longitude || "0"})
+              </span>
+            </p>
+          </div>
         </div>
-        <div>
-          <h5 className="font-bold text-sm text-gray-800">{land.land_name}</h5>
-          
-          <p className="text-xs text-gray-500 font-medium">
-    {/* Menggunakan village dari props jika tersedia, jika tidak baru cari di land.village */}
-    Desa {village?.name || land.village?.name || "-"} 
-    <span className="text-gray-400 font-normal ml-2">
-      ({village?.meta?.lat || land.village?.meta?.lat || land.center_latitude || "0"}, {village?.meta?.long || land.village?.meta?.long || land.center_longitude || "0"})
-    </span>
-  </p>
-          
+        <div className="text-gray-400 hover:text-emerald-600 transition-colors">
+          {isOpen ? <FaChevronUp className="w-4 h-4 text-emerald-600" /> : <FaChevronDown className="w-4 h-4" />}
         </div>
       </div>
-      <div className="text-gray-400 hover:text-emerald-600 transition-colors">
-        {isOpen ? <FaChevronUp className="w-4 h-4 text-emerald-600" /> : <FaChevronDown className="w-4 h-4" />}
-      </div>
-    </div>
 
       {error && (
         <div className="mt-3 text-xs text-red-600 bg-red-50 p-3 rounded-lg border border-red-100 flex items-center gap-2">
@@ -142,8 +262,7 @@ const handleSelectorChange = (summary: { totalBags: number; totalCost: number; t
             <div className="text-center py-6 text-xs text-gray-400">Tidak ada rekomendasi pupuk yang tersedia.</div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 w-full">
-              
-              {/* KOLOM KIRI */}
+              {/* KOLOM KRI */}
               <div className="lg:col-span-8 space-y-4">
                 <FertilizerItemSelector 
                   recommendations={recommendations} 
@@ -174,7 +293,6 @@ const handleSelectorChange = (summary: { totalBags: number; totalCost: number; t
                   </div>
                 )}
               </div>
-
             </div>
           )}
         </div>

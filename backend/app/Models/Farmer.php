@@ -66,4 +66,9 @@ class Farmer extends Model
     {
         return $this->belongsTo(\Laravolt\Indonesia\Models\District::class, 'district_id', 'code');
     }
+
+    public function transactions(): HasMany
+    {
+        return $this->hasMany(Transaction::class, 'farmer_id');
+    }
 }

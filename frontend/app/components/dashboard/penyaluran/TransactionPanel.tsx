@@ -1,29 +1,61 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
+import { FiArrowLeft } from "react-icons/fi";
+import api from "@/app/lib/axios"; 
+import Swal from "sweetalert2";
+import SelectedItemsList from "./SelectedItemsList"; 
 
-interface SelectedFertilizerItem {
-  id: string | null;
+export interface SelectedFertilizerItem {
+  bagKey: string;
+  fertilizer_id: number;
+  fertilizer_code: string;
   nama: string;
+  weightKg: number;
+  price_per_kg: number;
+  subtotal: number;
+  isChecked: boolean;
   image_url: string | null;
-  jumlah_karung: number;
-  packaging_size_kg: number;
-  total_kg: number;
-  total_cost: number;
+  packaging_size_kg?: number; 
+  original_recommended_kg: number; 
+  land_id: number; 
+  analysis_meta_snapshot: {
+    luas_lahan_hektar: number;
+    jenis_komoditas: string;
+    fase_tanam_saat_ini: string;
+    suhu_rata_rata_celcius: number;
+    kelembapan_persen: number;
+    curah_hujan_mm: number;
+  };
 }
 
 interface TransactionPanelProps {
+  farmerId: number; 
   grandTotalCost: number;
   items: SelectedFertilizerItem[];
   onBack: () => void;
+  onSuccess?: () => void; 
+  farmerName: string;
+  farmerAddress: string;
+  villageName: string;
 }
 
-const BACKEND_BASE_URL = "http://localhost:8000"; 
+const BACKEND_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"; 
 
-export default function TransactionPanel({ grandTotalCost, items, onBack }: TransactionPanelProps) {
+export default function TransactionPanel({ 
+  farmerId,
+  grandTotalCost, 
+  items, 
+  onBack, 
+  onSuccess,
+  farmerName, 
+  farmerAddress, 
+  villageName 
+}: TransactionPanelProps) {
   const [paymentMethod, setPaymentMethod] = useState<string>("Tunai");
   const [amountPaid, setAmountPaid] = useState<number>(0);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const changeAmount = amountPaid - grandTotalCost;
   const changeDisplay = changeAmount > 0 ? changeAmount : 0;
@@ -33,132 +65,259 @@ export default function TransactionPanel({ grandTotalCost, items, onBack }: Tran
     if (url.startsWith("http://") || url.startsWith("https://")) {
       return url;
     }
-    return `${BACKEND_BASE_URL}${url.startsWith("/") ? "" : "/"}${url}`;
+    const cleanPath = url.startsWith("/") ? url : `/${url}`;
+    return `${BACKEND_BASE_URL}${cleanPath}`.replace(/([^:]\/)\/+/g, "$1");
   };
 
-  /**
-   * Logika Baru: Mengurai total_kg menjadi fisik karung.
-   * Misal: total_kg = 140kg, packaging = 50kg, total_karung = 3
-   * Distribusi: Karung 1 (50kg), Karung 2 (50kg), Karung 3 (40kg)
-   */
-  const getExpandedBags = () => {
-    const expandedList: Array<{
-      nama: string;
-      image_url: string | null;
-      bagIndex: number;
-      type: "Utuh" | "Kustom/Eceran";
-      weight_kg: number;
-      cost: number;
-    }> = [];
+  const activeBags = items.filter(item => item.isChecked);
 
-    items.forEach((item) => {
-      let remainingKg = item.total_kg;
-      const pricePerKg = item.total_cost / item.total_kg;
-      
-      // Menentukan total wadah fisik yang dibeli (dibulatkan ke atas)
-      // Misal 140kg / 50kg = 2.8 -> Berarti ada 3 wadah fisik karung
-      const totalBagsCount = Math.ceil(item.total_kg / item.packaging_size_kg);
+  // DETEKSI DINI: Memeriksa apakah ada ID pupuk yang tidak valid (0, NaN, atau undefined)
+  const hasInvalidFertilizer = activeBags.some(bag => {
+    const rawId = bag.fertilizer_id;
+    return !rawId || isNaN(Number(rawId)) || Number(rawId) <= 0;
+  });
 
-      for (let i = 0; i < totalBagsCount; i++) {
-        // Jika sisa kiloan masih lebih besar atau sama dengan ukuran kemasan default, pasang harga utuh
-        // Jika sisa kiloan kurang dari kemasan default (ex: 40kg), pasang sisa kiloannya
-        const currentBagWeight = remainingKg >= item.packaging_size_kg 
-          ? item.packaging_size_kg 
-          : remainingKg;
+  const handlePayment = async () => {
+    if (paymentMethod === "Tunai" && amountPaid < grandTotalCost) {
+      setErrorMessage("Nominal pembayaran tunai kurang dari total harga!");
+      return;
+    }
 
-        if (currentBagWeight <= 0) break;
+    setLoading(true);
+    setErrorMessage(null);
 
-        const isUtuh = currentBagWeight === item.packaging_size_kg;
+    const groupedItemsMap: { 
+      [key: string]: {
+        fertilizer_id: number;
+        actual_purchased_kg: number;
+        price_per_kg: number;
+        subtotal: number;
+        original_recommended_kg: number;
+        land_id: number;
+        analysis_meta_snapshot: {
+          luas_lahan_hektar: number;
+          jenis_komoditas: string;
+          fase_tanam_saat_ini: string;
+          suhu_rata_rata_celcius: number;
+          kelembapan_persen: number;
+          curah_hujan_mm: number;
+        };
+      }
+    } = {};
 
-        expandedList.push({
-          nama: item.nama,
-          image_url: item.image_url,
-          bagIndex: expandedList.length + 1,
-          type: isUtuh ? "Utuh" : "Kustom/Eceran",
-          weight_kg: currentBagWeight,
-          cost: Math.round(currentBagWeight * pricePerKg),
-        });
+    let dataCacatTerdeteksi = false;
 
-        remainingKg -= currentBagWeight;
+    activeBags.forEach((bag) => {
+      const rawId = bag.fertilizer_id;
+      const sanitizedFertilizerId = rawId && !isNaN(Number(rawId)) ? Number(rawId) : 0;
+
+      if (sanitizedFertilizerId === 0) {
+        dataCacatTerdeteksi = true;
+      }
+
+      const key = `${bag.land_id}-${sanitizedFertilizerId}`;
+
+      if (groupedItemsMap[key]) {
+        groupedItemsMap[key].actual_purchased_kg += bag.weightKg;
+        groupedItemsMap[key].subtotal += bag.subtotal;
+      } else {
+        groupedItemsMap[key] = {
+          fertilizer_id: sanitizedFertilizerId,
+          actual_purchased_kg: bag.weightKg,
+          price_per_kg: bag.price_per_kg,
+          subtotal: bag.subtotal,
+          original_recommended_kg: bag.original_recommended_kg,
+          land_id: bag.land_id,
+          analysis_meta_snapshot: {
+            luas_lahan_hektar: bag.analysis_meta_snapshot?.luas_lahan_hektar ?? 0,
+            jenis_komoditas: bag.analysis_meta_snapshot?.jenis_komoditas ?? "Tidak Diketahui",
+            fase_tanam_saat_ini: bag.analysis_meta_snapshot?.fase_tanam_saat_ini ?? "Tidak Diketahui",
+            suhu_rata_rata_celcius: bag.analysis_meta_snapshot?.suhu_rata_rata_celcius ?? 0,
+            kelembapan_persen: bag.analysis_meta_snapshot?.kelembapan_persen ?? 0, 
+            curah_hujan_mm: bag.analysis_meta_snapshot?.curah_hujan_mm ?? 0
+          }
+        };
       }
     });
 
-    return expandedList;
-  };
+    const optimizedItems = Object.values(groupedItemsMap);
 
-  const expandedBags = getExpandedBags();
+    // BLOKIR SEBELUM KELUAR REQUEST KE API JIKA DATA TIDAK VALID
+    if (dataCacatTerdeteksi) {
+      setLoading(false);
+      Swal.fire({
+        title: "Aplikasi Memblokir Transaksi",
+        text: "Gagal mengirim data! Terdeteksi pupuk dengan ID database tidak valid (0 / null). Silakan refresh halaman dan pilih ulang pupuk.",
+        icon: "warning",
+        confirmButtonText: "Mengerti"
+      });
+      return;
+    }
+
+    const payload = {
+      farmer_id: farmerId,
+      payment_method: paymentMethod,
+      amount_paid: paymentMethod === "Tunai" ? amountPaid : grandTotalCost,
+      items: optimizedItems 
+    };
+
+    try {
+      const response = await api.post('/cooperative/transaction/transactionsfix', payload);
+      
+      if (response.data.success) {
+        const tglHariIni = new Date().toLocaleDateString("id-ID", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric"
+        }).replace(/\//g, "-");
+
+        const trCode = response.data.data?.transaction_code || "GAF-" + Math.floor(100 + Math.random() * 900) + "-" + Math.floor(1000 + Math.random() * 9000);
+
+        Swal.fire({
+          html: `
+            <div class="flex flex-col items-center">
+              <div class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center text-3xl font-bold mb-4">✓</div>
+              <h3 class="text-lg font-extrabold text-gray-800">Pembelian Berhasil</h3>
+              <p class="text-xs font-bold text-gray-500 tracking-wider mt-1">${trCode}</p>
+              
+              <div class="w-full mt-6 space-y-3.5 text-xs text-left">
+                <div class="flex justify-between items-center">
+                  <span class="text-gray-500 font-semibold">Petani</span>
+                  <span class="text-gray-800 font-bold">${farmerName}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                  <span class="text-gray-500 font-semibold">Tanggal</span>
+                  <span class="text-gray-800 font-bold">${tglHariIni}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                  <span class="text-gray-500 font-semibold">Total Pembayaran</span>
+                  <span class="text-gray-800 font-black">Rp ${grandTotalCost.toLocaleString("id-ID")}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                  <span class="text-gray-500 font-semibold">Metode</span>
+                  <span class="text-gray-800 font-bold">${paymentMethod}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                  <span class="text-gray-500 font-semibold">Dibayar</span>
+                  <span class="text-gray-800 font-bold">Rp ${(paymentMethod === "Tunai" ? amountPaid : grandTotalCost).toLocaleString("id-ID")}</span>
+                </div>
+                <div class="flex justify-between items-center pt-2 border-t border-dashed border-gray-200">
+                  <span class="text-gray-500 font-semibold">Kembalian</span>
+                  <span class="text-emerald-600 font-black">Rp ${changeDisplay.toLocaleString("id-ID")}</span>
+                </div>
+              </div>
+            </div>
+          `,
+          showCancelButton: true,
+          confirmButtonText: 'Kembali Ke Halaman',
+          cancelButtonText: '🖨️ Cetak Struk',
+          reverseButtons: true,
+          customClass: {
+            popup: 'rounded-3xl p-6 max-w-sm',
+            confirmButton: 'bg-[#064e3b] text-white font-bold px-6 py-2.5 rounded-xl text-xs w-full hover:bg-emerald-950 transition',
+            cancelButton: 'bg-white border border-gray-200 text-gray-700 font-bold px-6 py-2.5 rounded-xl text-xs w-full hover:bg-gray-50 transition'
+          },
+          buttonsStyling: false
+        }).then((result) => {
+          if (result.dismiss === Swal.DismissReason.cancel) {
+            window.print();
+          }
+          if (onSuccess) {
+            onSuccess();
+          } else {
+            window.location.href = "/dashboard/admin-koprasi/penyaluran";
+          }
+        });
+      }
+    } catch (error: any) {
+      let serverMessage = "Terjadi kesalahan saat memproses pembayaran.";
+      let detailValidationErrors = "";
+
+      if (error.response) {
+        if (error.response.status === 422 && error.response.data.errors) {
+          const errorsObj = error.response.data.errors;
+          detailValidationErrors = Object.keys(errorsObj)
+            .map(key => `<li><b>${key}:</b> ${errorsObj[key].join(", ")}</li>`)
+            .join("");
+          serverMessage = "Validasi data gagal di server Laravel.";
+        } else {
+          serverMessage = error.response.data.message || serverMessage;
+        }
+      }
+
+      Swal.fire({
+        title: "Pembayaran Gagal (Error 422)",
+        html: `
+          <div class="text-left text-xs space-y-2">
+            <p class="text-gray-600">${serverMessage}</p>
+            ${detailValidationErrors ? `
+              <div class="bg-red-50 p-3 rounded-lg border border-red-200 mt-2">
+                <p class="font-bold text-red-700 mb-1">Detail Validasi Laravel:</p>
+                <ul class="list-disc pl-4 space-y-1 text-red-600 max-h-32 overflow-y-auto">${detailValidationErrors}</ul>
+              </div>
+            ` : ""}
+          </div>
+        `,
+        icon: "error",
+        confirmButtonText: "Perbaiki Data",
+        customClass: {
+          confirmButton: 'bg-[#115e59] text-white font-bold px-6 py-2.5 rounded-xl text-xs'
+        },
+        buttonsStyling: false
+      });
+
+      setErrorMessage(serverMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm space-y-6 animate-in fade-in duration-200">
-      <div>
-        <h3 className="text-base font-bold text-gray-800">Transaksi Kebutuhan Pupuk</h3>
-        <p className="text-xs text-gray-400 mt-0.5">Lengkapi pembayaran untuk transaksi kebutuhan pupuk</p>
-      </div>
-
-      {/* Ringkasan Pembelian */}
-      <div className="space-y-3">
-        <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider">Rincian Fisik Karung</h4>
-        
-        <div className="border border-gray-100 rounded-xl divide-y divide-gray-100 overflow-hidden bg-white max-h-[360px] overflow-y-auto">
-          {expandedBags.map((bag, idx) => {
-            const validImageUrl = getImageUrl(bag.image_url);
-
-            return (
-              <div key={idx} className="p-4 flex items-center justify-between text-xs hover:bg-gray-50/50 transition-colors">
-                <div className="flex items-center gap-3">
-                  <span className="font-bold text-gray-400 w-4">{bag.bagIndex}</span>
-                  
-                  <div className="w-10 h-10 bg-gray-50 rounded-xl border border-gray-100 flex items-center justify-center overflow-hidden shrink-0 relative">
-                    {validImageUrl ? (
-                      <Image 
-                        src={validImageUrl} 
-                        alt={bag.nama} 
-                        fill 
-                        className="object-cover" 
-                        sizes="40px"
-                        unoptimized
-                      />
-                    ) : (
-                      <div className="bg-emerald-50 text-emerald-800 text-[9px] font-bold p-1 text-center line-clamp-2">
-                        {bag.nama.substring(0, 5).toUpperCase()}
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div>
-                    <p className="font-bold text-gray-800">{bag.nama}</p>
-                    <div className="flex items-center gap-1.5 mt-0.5">
-                      <span className="text-[10px] text-zinc-600 font-bold">{bag.weight_kg} Kg</span>
-                      <span className={`text-[9px] px-1.5 py-0.2 rounded-full font-bold uppercase tracking-wide border ${
-                        bag.type === "Utuh" 
-                          ? "bg-blue-50 text-blue-700 border-blue-100" 
-                          : "bg-orange-50 text-orange-700 border-orange-100"
-                      }`}>
-                        {bag.type === "Utuh" ? `Utuh (${bag.weight_kg}kg)` : "Diubah Kasir"}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="text-right">
-                  <p className="font-bold text-zinc-700">1 Karung</p>
-                  <p className="font-extrabold text-[#115e59] mt-0.5">Rp {bag.cost.toLocaleString("id-ID")}</p>
-                </div>
-              </div>
-            );
-          })}
+      {/* Header Panel */}
+      <div className="flex items-center gap-3">
+        <button 
+          onClick={onBack}
+          disabled={loading}
+          className="w-8 h-8 rounded-lg border border-gray-150 hover:bg-gray-50 flex items-center justify-center text-gray-500 transition-colors disabled:opacity-50"
+        >
+          <FiArrowLeft className="w-4 h-4" />
+        </button>
+        <div>
+          <h3 className="text-base font-bold text-gray-800">Konfirmasi Pembayaran</h3>
+          <p className="text-xs text-gray-400 mt-0.5">Selesaikan transaksi penyaluran pupuk bersubsidi</p>
         </div>
       </div>
 
-      {/* Rincian Total Kotak Abu-Abu */}
+      {/* Alert Error */}
+      {(errorMessage || hasInvalidFertilizer) && (
+        <div className="bg-rose-50 border border-rose-200 text-rose-700 p-3 rounded-xl text-xs font-semibold">
+          {hasInvalidFertilizer 
+            ? "⚠️ PERINGATAN: Terdeteksi pupuk tanpa ID database yang valid di daftar belanja. Hubungi admin sistem atau pilih pupuk kembali."
+            : errorMessage}
+        </div>
+      )}
+
+      {/* SUB-KOMPONEN 1: Daftar Pembelian & Detail Petani */}
+      <SelectedItemsList 
+        farmerName={farmerName}
+        farmerAddress={farmerAddress}
+        villageName={villageName}
+        activeBags={activeBags}
+        getImageUrl={getImageUrl}
+      />
+
+      {/* Rincian Total */}
       <div className="bg-gray-50/80 border border-gray-100 rounded-xl p-4 space-y-2 text-xs text-gray-600">
         <div className="flex justify-between">
           <span>Total Fisik Wadah</span>
-          <span className="font-bold text-gray-800">{expandedBags.length} Karung</span>
+          <span className="font-bold text-gray-800">{activeBags.length} Karung</span>
         </div>
         <div className="flex justify-between">
           <span>Total Akumulasi Jenis</span>
-          <span className="font-bold text-gray-800">{items.length} Produk Pupuk</span>
+          <span className="font-bold text-gray-800">
+            {new Set(activeBags.map(b => b.fertilizer_code)).size} Jenis Pupuk
+          </span>
         </div>
         <div className="flex justify-between pt-2 border-t border-gray-200 text-sm">
           <span className="font-semibold text-gray-800">Total Harga</span>
@@ -178,7 +337,8 @@ export default function TransactionPanel({ grandTotalCost, items, onBack }: Tran
                 value={method}
                 checked={paymentMethod === method}
                 onChange={() => setPaymentMethod(method)}
-                className="w-4 h-4 text-emerald-600 border-gray-300 focus:ring-emerald-500 cursor-pointer"
+                disabled={loading}
+                className="w-4 h-4 text-emerald-600 border-gray-300 focus:ring-emerald-500 cursor-pointer disabled:opacity-50"
               />
               {method}
             </label>
@@ -196,8 +356,9 @@ export default function TransactionPanel({ grandTotalCost, items, onBack }: Tran
               type="number"
               placeholder="0"
               value={amountPaid || ""}
-              onChange={(e) => setAmountPaid(Number(e.target.value) || 0)}
-              className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-800 focus:outline-none focus:border-emerald-500 transition"
+              onChange={(e) => setAmountPaid(e.target.value === "" ? 0 : Number(e.target.value))}
+              disabled={loading}
+              className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-800 focus:outline-none focus:border-emerald-500 transition disabled:bg-gray-100"
             />
           </div>
           <div className="flex justify-between items-center pt-1.5 text-xs">
@@ -209,11 +370,27 @@ export default function TransactionPanel({ grandTotalCost, items, onBack }: Tran
 
       {/* Tombol Aksi Bawah */}
       <div className="flex justify-between items-center pt-4 border-t border-gray-100">
-        <button onClick={onBack} className="px-5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-bold text-gray-600 hover:bg-gray-50 transition">
+        <button 
+          onClick={onBack} 
+          disabled={loading}
+          className="px-5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-bold text-gray-600 hover:bg-gray-50 transition disabled:opacity-50"
+        >
           Kembali
         </button>
-        <button onClick={() => alert("Transaksi Sukses Dikonfirmasi!")} className="px-5 py-2.5 bg-[#115e59] text-white rounded-xl text-xs font-bold hover:bg-[#134e4a] transition">
-          Konfirmasi Pembayaran
+        <button 
+          onClick={handlePayment} 
+          disabled={loading || activeBags.length === 0 || hasInvalidFertilizer}
+          className={`px-5 py-2.5 rounded-xl text-xs font-bold transition text-white ${
+            hasInvalidFertilizer 
+              ? "bg-amber-600 hover:bg-amber-700 cursor-not-allowed" 
+              : "bg-[#115e59] hover:bg-[#134e4a] disabled:opacity-50"
+          }`}
+        >
+          {loading 
+            ? "Memproses..." 
+            : hasInvalidFertilizer 
+              ? "⚠️ ID Pupuk Cacat" 
+              : "Konfirmasi Pembayaran"}
         </button>
       </div>
     </div>

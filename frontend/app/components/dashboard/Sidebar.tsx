@@ -73,7 +73,7 @@ export default function Sidebar({ handleLogout, role, isOpen }: SidebarProps) {
     {
       name: "Status distribusi",
       icon: FaTruck,
-      href: "/dashboard/admin-koprasi/riwayat-distribusi",
+      href: "/dashboard/admin-koprasi/status-distribusi",
       roles: ["petugas-koperasi"],
     },
     {

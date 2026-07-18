@@ -12,17 +12,20 @@ export default function StokInventarisLayout({ children }: { children: React.Rea
   }
 
   return (
-    <div className="space-y-6 animate-fadeIn bg-zinc-50/50 min-h-screen -mt-2.5">
-      {/* HEADER UTAMA */}
-      <div className="border-b border-zinc-100">
+
+    <div className="flex flex-col space-y-4 animate-fadeIn bg-zinc-50/50 min-h-screen -mt-2.5 overflow-hidden">
+      
+      {/* HEADER UTAMA (Statis/Fixed height di dalam layout) */}
+      <div className="border-b border-zinc-100 pb-3 flex-shrink-0">
         <h1 className="text-xl font-semibold text-[#115e59] tracking-tight">Stok & Inventaris</h1>
         <p className="text-xs text-zinc-500 font-medium mt-1">
           Kelola pengiriman dan penyaluran pupuk dari koperasi ke Dinas Pertanian
         </p>
       </div>
 
-      {/* Sisa konten halaman akan di-render di sini */}
-      <div>{children}</div>
+      <div className="flex-1 relative min-h-0">
+        {children}
+      </div>
     </div>
   );
 }

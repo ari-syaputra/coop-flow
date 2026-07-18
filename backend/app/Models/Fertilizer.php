@@ -48,4 +48,18 @@ class Fertilizer extends Model
     {
         return $this->hasMany(InventoryMutation::class);
     }
+
+    public function transactionItems(): HasMany
+    {
+        return $this->hasMany(TransactionItem::class);
+    }
+
+    public function mlLogs(): HasMany
+    {
+        return $this->hasMany(TransactionMlLog::class);
+    }
+
+    public function aiPredictions() {
+        return $this->hasMany(AiPrediction::class);
+    }
 }
