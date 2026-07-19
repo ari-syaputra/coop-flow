@@ -62,12 +62,13 @@ export default function AdminKoperasiLayout({ children }: { children: React.Reac
     return <div className="min-h-screen bg-[#f8fafc]" />;
   }
 
-  const isAdminLapangan = role === "admin-lapangan";
+  // Menentukan apakah user merupakan role yang tidak menggunakan sidebar (admin-lapangan ATAU dinas-pertanian)
+  const hideSidebar = role === "admin-lapangan" || role === "dinas-pertanian";
 
   return (
     <div className="flex min-h-screen bg-[#f8fafc] text-zinc-800 antialiased font-sans">
-      {/* Sidebar hanya dirender jika BUKAN admin-lapangan */}
-      {!isAdminLapangan && (
+      {/* Sidebar disembunyikan jika role termasuk dalam kategori hideSidebar */}
+      {!hideSidebar && (
         <Sidebar handleLogout={logout} role={role} isOpen={isSidebarOpen} />
       )}
 
@@ -80,8 +81,8 @@ export default function AdminKoperasiLayout({ children }: { children: React.Reac
           toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
         />
 
-        {/* Jika admin lapangan, layout menggunakan padding simetris penuh (px-6 md:px-12) */}
-        <div className={`w-full mt-8 ${isAdminLapangan ? "px-6 md:px-12" : "px-6 md:px-10"}`}>
+        {/* Jika berstatus hideSidebar, layout menggunakan padding simetris penuh (px-6 md:px-12) */}
+        <div className={`w-full mt-8 ${hideSidebar ? "px-6 md:px-12" : "px-6 md:px-10"}`}>
           <div className="w-full max-w-[1600px] mx-auto">{children}</div>
         </div>
       </div>

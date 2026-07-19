@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\CooperativeRegistrationController;
 use App\Http\Controllers\CooperativeController; 
 use App\Http\Controllers\FieldAdminController;
 use App\Http\Controllers\CooperativeDashboardController;
+use App\Http\Controllers\DinasDashboardController;
 use App\Http\Controllers\DistributionController; 
 use App\Http\Controllers\FarmerController; 
 use App\Http\Controllers\FarmerGroupController;
@@ -131,6 +132,7 @@ Route::middleware('auth:sanctum')->group(function () {
     |--------------------------------------------------------------------------
     */
     Route::prefix('dinas')->group(function () {
+        Route::get('/dashboard', [DinasDashboardController::class, 'getDinasDashboardData']);
         Route::post('/procurement/{id}/verify', [ProcurementOrderController::class, 'verifyByDinas']); 
         Route::post('/procurement/{id}/arrived-lini3', [ProcurementOrderController::class, 'updateToLiniTiga']); 
         Route::post('/procurement/{id}/release-lini4', [ProcurementOrderController::class, 'releaseToLiniEmpat']); 

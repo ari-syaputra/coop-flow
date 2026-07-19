@@ -23,7 +23,8 @@ class User extends Authenticatable
     'address',
     'cooperative_id',
     'status',    
-    'rejection_reason'  
+    'rejection_reason',
+    'kabupaten'
 ];
 protected $guard_name = 'api';
     /**

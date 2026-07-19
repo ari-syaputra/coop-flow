@@ -40,8 +40,7 @@ class ProcurementOrderController extends Controller
             $query->where('cooperative_id', $user->cooperative_id);
         } elseif ($user->hasRole('dinas-pertanian')) {
             $query->whereHas('cooperative', function ($q) use ($user) {
-                // Sesuaikan 'kabupaten' pada model User jika field di model User Anda berbeda
-                $q->where('city_koor', $user->kabupaten); 
+                $q->whereRaw('LOWER(city_koor) = ?', [strtolower($user->kabupaten)]);
             });
         }
 

@@ -49,17 +49,19 @@ export default function Navbar({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Menentukan class warna navbar secara dinamis berdasarkan role
-  const isAdminLapangan = currentRole === "admin-lapangan";
-  const headerBgClass = isAdminLapangan 
+  // Flag untuk mendeteksi role yang menggunakan tampilan penuh mandiri tanpa sidebar
+  const isMandatoryFullLayout = currentRole === "admin-lapangan" || currentRole === "dinas-pertanian";
+  
+  // Menentukan class warna navbar secara dinamis berdasarkan rumpun layout
+  const headerBgClass = isMandatoryFullLayout 
     ? "bg-[#107349] border-b border-green-700 text-white" 
     : "bg-white border-2 border-b border-slate-200 shadow-md shadow-green-800/80 text-slate-800";
 
   return (
     <header className={`h-18 ${headerBgClass} flex items-center justify-between px-6 lg:px-12 sticky top-0 z-50 shadow-sm shadow-zinc-100/50 font-sans transition-colors duration-200`}>
       
-      {isAdminLapangan ? (
-        /* Sisi Kiri untuk role: admin-lapangan */
+      {isMandatoryFullLayout ? (
+        /* Sisi Kiri untuk role tanpa sidebar (admin-lapangan & dinas-pertanian) */
         <div className="flex items-center space-x-3">
           <div className="h-10 w-10 flex items-center justify-center rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 p-1.5 shadow-md shadow-emerald-100">
             <img src="/logonobg.png" alt="Coopflow" className="h-full w-full object-contain brightness-0 invert" />
@@ -67,13 +69,11 @@ export default function Navbar({
           <span className="font-extrabold text-lg tracking-tight text-white block leading-none">COOP-FLOW</span>
         </div>
       ) : (
-        /* Sisi Kiri untuk role SEAIN admin-lapangan (Tombol Hamburger Rapat Kiri) */
+        /* Sisi Kiri untuk role selain itu (Tombol Hamburger Rapat Kiri) */
         <div className="-ml-2 lg:-ml-6 flex items-center">
           <button 
             onClick={toggleSidebar} 
-            className={`p-2.5 rounded-xl transition focus:outline-none flex items-center justify-center ${
-              isAdminLapangan ? "text-white hover:bg-green-800/50" : "text-slate-700 hover:bg-slate-100"
-            }`}
+            className="p-2.5 rounded-xl transition focus:outline-none flex items-center justify-center text-slate-700 hover:bg-slate-100"
             title={isSidebarOpen ? "Sembunyikan Sidebar" : "Tampilkan Sidebar"}
           >
             <FaBars className="text-xl" />
@@ -81,11 +81,11 @@ export default function Navbar({
         </div>
       )}
 
-      {/* Kanan: Sinkronisasi (Hanya Admin Lapangan), Notifikasi & Profil */}
+      {/* Kanan: Fitur Tambahan (Hanya Admin Lapangan), Notifikasi & Profil */}
       <div className="flex items-center space-x-5">
         
-        {/* Fitur Sinkronisasi HANYA muncul jika role-nya admin-lapangan */}
-        {isAdminLapangan && (
+        {/* Fitur Sinkronisasi HANYA muncul spesifik jika role-nya admin-lapangan */}
+        {currentRole === "admin-lapangan" && (
           <div className="hidden lg:flex items-center space-x-2.5 bg-[#f4f7f5] px-4 py-1.5 rounded-xl border border-green-100/50">
             <FaCloudUploadAlt className="text-green-600 text-lg" />
             <div className="text-left leading-tight">
@@ -97,11 +97,11 @@ export default function Navbar({
         
         {/* Tombol Notifikasi */}
         <button className={`relative p-2 rounded-full transition focus:outline-none ${
-          isAdminLapangan ? "hover:bg-green-800/40" : "hover:bg-slate-100"
+          isMandatoryFullLayout ? "hover:bg-green-800/40" : "hover:bg-slate-100"
         }`}>
-          <FaBell className={`text-xl ${isAdminLapangan ? "text-white" : "text-slate-600"}`} />
+          <FaBell className={`text-xl ${isMandatoryFullLayout ? "text-white" : "text-slate-600"}`} />
           <span className={`absolute top-1 right-1 w-4 h-4 bg-red-500 text-[9px] font-extrabold text-white rounded-full flex items-center justify-center ring-2 ${
-            isAdminLapangan ? "ring-[#107349]" : "ring-white"
+            isMandatoryFullLayout ? "ring-[#107349]" : "ring-white"
           }`}>2</span>
         </button>
 
@@ -112,14 +112,14 @@ export default function Navbar({
               src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" 
               alt="Avatar" 
               className={`h-9 w-9 rounded-full object-cover border shadow-sm ${
-                isAdminLapangan ? "border-emerald-500" : "border-slate-200"
+                isMandatoryFullLayout ? "border-emerald-500" : "border-slate-200"
               }`} 
             />
             <div className="text-left hidden sm:block">
-              <p className={`text-sm font-bold leading-tight ${isAdminLapangan ? "text-white" : "text-slate-800"}`}>{adminName}</p>
-              <p className={`text-[11px] font-medium mt-0.5 uppercase tracking-wide ${isAdminLapangan ? "text-emerald-200" : "text-slate-400"}`}>{roleName}</p>
+              <p className={`text-sm font-bold leading-tight ${isMandatoryFullLayout ? "text-white" : "text-slate-800"}`}>{adminName}</p>
+              <p className={`text-[11px] font-medium mt-0.5 uppercase tracking-wide ${isMandatoryFullLayout ? "text-emerald-200" : "text-slate-400"}`}>{roleName}</p>
             </div>
-            <FaChevronDown className={`text-xs transition ${isAdminLapangan ? "text-emerald-200 group-hover:text-white" : "text-slate-400 group-hover:text-slate-600"}`} />
+            <FaChevronDown className={`text-xs transition ${isMandatoryFullLayout ? "text-emerald-200 group-hover:text-white" : "text-slate-400 group-hover:text-slate-600"}`} />
           </div>
 
           {dropdownOpen && (
@@ -135,8 +135,3 @@ export default function Navbar({
     </header>
   );
 }
-
-
-
-
-

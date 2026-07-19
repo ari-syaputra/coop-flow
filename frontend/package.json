@@ -20,7 +20,8 @@
     "react-leaflet": "^5.0.0",
     "recharts": "^3.9.2",
     "sweetalert2": "^11.26.25",
-    "zod": "^4.4.3"
+    "zod": "^4.4.3",
+    "zustand": "^5.0.14"
   },
   "devDependencies": {
     "@tailwindcss/oxide-linux-x64-musl": "^4",

@@ -83,17 +83,35 @@ class AuthController extends Controller
         // ==========================================
         
         // Tolak jika status masih PENDING
-        if ($user->status === 'PENDING') {
-            return response()->json([
-                'message' => 'Gagal masuk: Akun Koperasi Anda masih dalam proses verifikasi oleh Kemenko Pangan.'
-            ], 403); // 403 Forbidden
-        }
+        // if ($user->status === 'PENDING') {
+        //     return response()->json([
+        //         'message' => 'Gagal masuk: Akun Koperasi Anda masih dalam proses verifikasi oleh Kemenko Pangan.'
+        //     ], 403); // 403 Forbidden
+        // }
 
-        // Tolak jika status REJECTED
-        if ($user->status === 'REJECTED') {
-            return response()->json([
-                'message' => 'Gagal masuk: Pendaftaran Koperasi ditolak. Alasan: ' . ($user->rejection_reason ?? 'Silakan hubungi Kemenko Pangan.')
-            ], 403); // 403 Forbidden
+        // // Tolak jika status REJECTED
+        // if ($user->status === 'REJECTED') {
+        //     return response()->json([
+        //         'message' => 'Gagal masuk: Pendaftaran Koperasi ditolak. Alasan: ' . ($user->rejection_reason ?? 'Silakan hubungi Kemenko Pangan.')
+        //     ], 403); // 403 Forbidden
+        // }
+
+
+        if ($user->hasAnyRole(['petani', 'petugas-koperasi', 'admin-lapangan'])) {
+            
+            // Tolak jika status masih PENDING
+            if ($user->status === 'PENDING') {
+                return response()->json([
+                    'message' => 'Gagal masuk: Akun Koperasi Anda masih dalam proses verifikasi oleh Kemenko Pangan.'
+                ], 403);
+            }
+
+            // Tolak jika status REJECTED
+            if ($user->status === 'REJECTED') {
+                return response()->json([
+                    'message' => 'Gagal masuk: Pendaftaran Koperasi ditolak. Alasan: ' . ($user->rejection_reason ?? 'Silakan hubungi Kemenko Pangan.')
+                ], 403);
+            }
         }
 
         // ==========================================

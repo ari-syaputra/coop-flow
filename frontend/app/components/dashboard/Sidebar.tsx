@@ -103,6 +103,7 @@ export default function Sidebar({ handleLogout, role, isOpen }: SidebarProps) {
     },
   ];
 
+  // Antisipasi jika role 'dinas-pertanian' atau 'admin-lapangan' memanggil sidebar secara tidak sengaja
   const filteredMenuItems = menuItems.filter((item) =>
     item.roles.includes(role),
   );
