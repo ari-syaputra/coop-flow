@@ -86,7 +86,7 @@ export default function KemenkoPanganDashboard() {
           icon={<HiTruck />}
           title="Validasi Pengada Pupuk"
           ctaText="Kelola Pupuk"
-          href="/dashboard/kemenko-pangan/validasi-pengadaan"
+          href="/dashboard/kemenko-pangan/validasi-pupuk"
         />
         <NavCard
           icon={<HiChartBarSquare />}

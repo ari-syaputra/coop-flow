@@ -16,22 +16,17 @@ class User extends Authenticatable
     use HasApiTokens, HasFactory, Notifiable, HasRoles;
 
     protected $fillable = [
-        'name', 
-        'email', 
-        'password', 
-        'phone', 
-        'address',
-        'province_code',
-        'city_code',
-        'district_code',
-        'village_code',
-        'cooperative_id',
-        'status',    
-        'rejection_reason',
-    ];
-
-    protected $guard_name = 'api';
-
+    'name', 
+    'email', 
+    'password', 
+    'phone', 
+    'address',
+    'cooperative_id',
+    'status',    
+    'rejection_reason',
+    'kabupaten'
+];
+protected $guard_name = 'api';
     /**
      * Relasi: User (Admin Koperasi/Lapangan) bernaung di bawah satu Koperasi
      */
@@ -39,7 +34,6 @@ class User extends Authenticatable
     {
         return $this->belongsTo(Cooperative::class);
     }
-
     /**
      * Hubungan lama Anda tetap dipertahankan jika diperlukan
      */
@@ -51,25 +45,5 @@ class User extends Authenticatable
     public function farmer(): HasOne
     {
         return $this->hasOne(Farmer::class);
-    }
-
-    public function province(): BelongsTo
-    {
-        return $this->belongsTo(\Laravolt\Indonesia\Models\Province::class, 'province_code', 'code');
-    }
-
-    public function city(): BelongsTo
-    {
-        return $this->belongsTo(\Laravolt\Indonesia\Models\City::class, 'city_code', 'code');
-    }
-
-    public function district(): BelongsTo
-    {
-        return $this->belongsTo(\Laravolt\Indonesia\Models\District::class, 'district_code', 'code');
-    }
-
-    public function village(): BelongsTo
-    {
-        return $this->belongsTo(\Laravolt\Indonesia\Models\Village::class, 'village_code', 'code');
     }
 }

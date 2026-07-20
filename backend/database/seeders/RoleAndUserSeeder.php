@@ -32,11 +32,7 @@ class RoleAndUserSeeder extends Seeder
                 'password' => Hash::make('password123'),
                 'phone' => '081234567890',
                 'address' => 'Kantor Poktan Sleman, Yogyakarta',
-                'cooperative_id' => 1,
-                'province_code' => 'DAERAH ISTIMEWA YOGYAKARTA',
-                'city_code' => 'KABUPATEN SLEMAN',
-                'district_code' => 'GODEAN',
-                'village_code' => 'SIDOMULYO',
+                'cooperative_id' => 1
             ]
         );
         if (!$adminLapangan->hasRole($roleAdminLapangan)) {
@@ -51,18 +47,14 @@ class RoleAndUserSeeder extends Seeder
                 'password' => Hash::make('password123'),
                 'phone' => '081234567891',
                 'address' => 'Koperasi Unit Desa (KUD) Makmur Sejahtera',
-                'cooperative_id' => 1,
-                'province_code' => 'DAERAH ISTIMEWA YOGYAKARTA',
-                'city_code' => 'KABUPATEN SLEMAN',
-                'district_code' => 'GODEAN',
-                'village_code' => 'SIDOMULYO',
+                'cooperative_id' => 1
             ]
         );
         if (!$petugasKoperasi->hasRole($rolePetugasKoperasi)) {
             $petugasKoperasi->assignRole($rolePetugasKoperasi);
         }
 
-        // --- Akun Dinas Pertanian  ---
+        // --- Akun Dinas Pertanian (Tidak Terikat Koperasi) ---
         $dinasPertanian = User::firstOrCreate(
             ['email' => 'dinas.pertanian@go.id'],
             [
@@ -70,18 +62,14 @@ class RoleAndUserSeeder extends Seeder
                 'password' => Hash::make('password123'),
                 'phone' => '081234567892',
                 'address' => 'Kantor Dinas Pertanian & Ketahanan Pangan Daerah',
-                'cooperative_id' => null,
-                'province_code' => 'DAERAH ISTIMEWA YOGYAKARTA',
-                'city_code' => 'KABUPATEN SLEMAN',
-                'district_code' => 'GODEAN',
-                'village_code' => 'SIDOMULYO',
+                'cooperative_id' => null
             ]
         );
         if (!$dinasPertanian->hasRole($roleDinasPertanian)) {
             $dinasPertanian->assignRole($roleDinasPertanian);
         }
 
-        // --- Akun Kemenko Pangan ---
+        // --- Akun Kemenko Pangan (Tidak Terikat Koperasi) ---
         $kemenkoPangan = User::firstOrCreate(
             ['email' => 'kemenko.pangan@go.id'],
             [

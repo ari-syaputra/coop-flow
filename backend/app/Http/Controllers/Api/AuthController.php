@@ -23,15 +23,7 @@ class AuthController extends Controller
             'phone' => 'nullable|string|unique:users',
             'address' => 'nullable|string',
             'role' => 'nullable|string|in:ketua-poktan,petani,dinas-pertanian',
-            'cooperative_id' => 'required_if:role,petani,ketua-poktan|exists:cooperatives,id',
-            
-            // --- Tambahan Validasi Wilayah ---
-            // Menggunakan 'size' karena panjang karakter dari Laravolt selalu tetap
-            'province_code' => 'nullable|string|size:2',
-            'city_code' => 'nullable|string|size:4',
-            'district_code' => 'nullable|string|size:7',
-            'village_code' => 'nullable|string|size:10',
-            // ---------------------------------
+            'cooperative_id' => 'required_if:role,petani,ketua-poktan|exists:cooperatives,id'
         ], [
             'cooperative_id.required_if' => 'Petani atau Ketua Poktan wajib memilih Koperasi tempat Anda bernaung.'
         ]);
@@ -40,7 +32,7 @@ class AuthController extends Controller
             return response()->json($validator->errors(), 422);
         }
 
-        // 2. Simpan Data User ke Database dengan data wilayah
+        // 2. Simpan Data User ke Database dengan cooperative_id
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
@@ -48,13 +40,6 @@ class AuthController extends Controller
             'phone' => $request->phone,
             'address' => $request->address,
             'cooperative_id' => $request->role === 'dinas-pertanian' ? null : $request->cooperative_id,
-            
-            // --- Simpan Kode Wilayah ---
-            'province_code' => $request->province_code,
-            'city_code' => $request->city_code,
-            'district_code' => $request->district_code,
-            'village_code' => $request->village_code,
-            // ---------------------------
         ]);
 
         // 3. Berikan Role menggunakan Spatie Permission
@@ -68,7 +53,7 @@ class AuthController extends Controller
             'message' => 'Registrasi berhasil!',
             'access_token' => $token,
             'token_type' => 'Bearer',
-            'user' => $user->load(['roles', 'province', 'city', 'district', 'village']) 
+            'user' => $user->load('roles') 
         ], 201);
     }
 
@@ -97,6 +82,21 @@ class AuthController extends Controller
         // 4. PENGECEKAN STATUS AKUN (BLOKIR AKSES)
         // ==========================================
         
+        // Tolak jika status masih PENDING
+        // if ($user->status === 'PENDING') {
+        //     return response()->json([
+        //         'message' => 'Gagal masuk: Akun Koperasi Anda masih dalam proses verifikasi oleh Kemenko Pangan.'
+        //     ], 403); // 403 Forbidden
+        // }
+
+        // // Tolak jika status REJECTED
+        // if ($user->status === 'REJECTED') {
+        //     return response()->json([
+        //         'message' => 'Gagal masuk: Pendaftaran Koperasi ditolak. Alasan: ' . ($user->rejection_reason ?? 'Silakan hubungi Kemenko Pangan.')
+        //     ], 403); // 403 Forbidden
+        // }
+
+
         if ($user->hasAnyRole(['petani', 'petugas-koperasi', 'admin-lapangan'])) {
             
             // Tolak jika status masih PENDING
@@ -125,8 +125,7 @@ class AuthController extends Controller
             'message' => 'Login berhasil!',
             'access_token' => $token,
             'token_type' => 'Bearer',
-            // Tambahkan relasi wilayah ke dalam response login
-            'user' => $user->load(['roles', 'cooperative', 'province', 'city', 'district', 'village'])
+            'user' => $user->load(['roles', 'cooperative'])
         ]);
     }
 
