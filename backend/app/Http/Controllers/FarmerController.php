@@ -16,14 +16,26 @@ class FarmerController extends Controller
 {
     public function index()
     {
-        $farmers = Farmer::with(['user', 'farmer_group', 'lands.plants', 'village'])->latest()->get();
+        $user = auth()->user();
+
+        $query = Farmer::with(['user', 'farmer_group', 'lands.plants', 'village']);
+
+        // Jika BUKAN Super Admin, filter data petani sesuai Koperasi tempat user bertugas/login
+        if (!$user->hasRole('super-admin')) {
+            $cooperativeId = $user->cooperative_id;
+
+            $query->whereHas('user', function ($q) use ($cooperativeId) {
+                $q->where('cooperative_id', $cooperativeId);
+            });
+        }
+
+        $farmers = $query->latest()->get();
 
         return response()->json([
             'success' => true,
             'data' => $farmers
         ], 200);
     }
-
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -90,6 +102,7 @@ class FarmerController extends Controller
                 'password' => Hash::make($request->password),
                 'phone' => $request->phone,
                 'address' => $request->address,
+                'cooperative_id' => auth()->user()->cooperative_id,
             ]);
 
             $user->assignRole('petani');
@@ -432,6 +445,149 @@ class FarmerController extends Controller
             ], 500);
         }
     }
+
+/**
+ * 🌟 METHOD BARU: Mengambil seluruh data real dari Database untuk Dashboard Petani (Mobile UI)
+ */
+public function getDashboardSummary(Request $request)
+{
+    try {
+        $user = $request->user();
+
+        // 1. Ambil data petani yang sedang login beserta relasinya
+        $farmer = Farmer::with([
+            'lands.plants', 
+            'village'
+        ])->where('user_id', $user->id)->first();
+
+        if (!$farmer) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Data profil petani tidak ditemukan.'
+            ], 404);
+        }
+
+        // 2. Hitung Ringkasan Saya (Real Data dari DB)
+        // A. Total Luas Lahan (Ha)
+        $totalLandArea = $farmer->lands->sum('area');
+
+        // B. Total Pupuk Diterima (Kg) & Total Riwayat Transaksi
+        // 🟢 PERBAIKAN: Gunakan $user->id karena transactions.farmer_id menyimpan ID User
+        $totalFertilizerReceived = DB::table('transaction_items')
+            ->join('transactions', 'transaction_items.transaction_id', '=', 'transactions.id')
+            ->where('transactions.farmer_id', $user->id) // 👈 Kembalikan ke $user->id
+            ->sum('transaction_items.actual_purchased_kg') ?? 0;
+
+        $totalTransactions = DB::table('transactions')
+            ->where('farmer_id', $user->id) // 👈 Kembalikan ke $user->id
+            ->count();
+
+        // C. Komoditas Utama (Berdasarkan jenis tanaman terbanyak di lahan milik petani ini)
+        $mainCommodity = DB::table('plants')
+            ->join('lands', 'plants.land_id', '=', 'lands.id')
+            ->where('lands.farmer_id', $farmer->id) // 👈 Lahan menggunakan $farmer->id
+            ->select('plants.name', DB::raw('count(*) as total'))
+            ->groupBy('plants.name')
+            ->orderByDesc('total')
+            ->value('plants.name') ?? 'Belum Ada';
+
+        // 3. Aktivitas Terbaru (Log Gabungan Transaksi & Pendaftaran Lahan)
+        $transactionLogs = DB::table('transactions')
+            ->where('farmer_id', $user->id) // 👈 Gunakan $user->id
+            ->select(
+                'id',
+                DB::raw("'fertilizer' as type"),
+                DB::raw("CONCAT('Penebusan Pupuk (Rp ', amount_paid, ')') as title"),
+                DB::raw("CONCAT('Metode: ', payment_method) as description"),
+                'created_at'
+            );
+
+        $landLogs = DB::table('lands')
+            ->where('farmer_id', $farmer->id) // 👈 Lahan menggunakan $farmer->id
+            ->select(
+                'id',
+                DB::raw("'land' as type"),
+                DB::raw("CONCAT('Lahan ', land_name, ' telah didaftarkan') as title"),
+                DB::raw("CONCAT('Luas: ', area, ' ', unit) as description"),
+                'created_at'
+            );
+
+        $recentActivities = $transactionLogs->union($landLogs)
+            ->orderByDesc('created_at')
+            ->limit(5)
+            ->get()
+            ->map(function ($act) {
+                return [
+                    'id' => $act->id,
+                    'type' => $act->type,
+                    'title' => $act->title,
+                    'description' => $act->description,
+                    'date' => \Carbon\Carbon::parse($act->created_at)->isoFormat('D MMMM YYYY HH:mm'),
+                ];
+            });
+
+        // 4. Data Kalender Real (Jadwal Tanam & Pemupukan)
+        $plantingCalendar = [];
+        if (DB::getSchemaBuilder()->hasTable('plants')) {
+            $plantingCalendar = DB::table('plants')
+                ->join('lands', 'plants.land_id', '=', 'lands.id')
+                ->where('lands.farmer_id', $farmer->id)
+                ->whereNotNull('planting_date')
+                ->select(
+                    'plants.id',
+                    'plants.name as plant_name',
+                    'plants.planting_date as date',
+                    'plants.current_phase as phase'
+                )
+                ->get();
+        }
+
+        $fertilizerCalendar = [];
+        if (DB::getSchemaBuilder()->hasTable('fertilizer_schedules')) {
+            $fertilizerCalendar = DB::table('fertilizer_schedules')
+                ->join('lands', 'fertilizer_schedules.land_id', '=', 'lands.id')
+                ->where('lands.farmer_id', $farmer->id)
+                ->select(
+                    'fertilizer_schedules.id',
+                    'fertilizer_schedules.fertilizer_name',
+                    'fertilizer_schedules.schedule_date as date',
+                    'fertilizer_schedules.stage'
+                )
+                ->get();
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Berhasil memuat data dashboard petani.',
+            'data' => [
+                'profile' => [
+                    'name' => $user->name,
+                    'role' => 'Petani',
+                    'avatar' => $user->avatar ? Storage::url($user->avatar) : null,
+                    'village' => $farmer->village->name ?? 'N/A',
+                ],
+                'summary' => [
+                    'total_land_ha' => (float) round($totalLandArea, 2),
+                    'fertilizer_received_kg' => (float) round($totalFertilizerReceived, 2),
+                    'total_transactions' => (int) $totalTransactions,
+                    'main_commodity' => $mainCommodity,
+                ],
+                'recent_activities' => $recentActivities,
+                'calendars' => [
+                    'planting' => $plantingCalendar,
+                    'fertilizer' => $fertilizerCalendar,
+                ]
+            ]
+        ], 200);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Gagal mengambil data dashboard.',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
 
     public function getFertilizerRecommendation(Request $request, $landId, FastApiService $fastApiService)
     {

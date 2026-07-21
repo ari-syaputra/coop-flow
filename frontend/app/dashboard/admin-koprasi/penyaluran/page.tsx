@@ -162,8 +162,10 @@ const [checkoutData, setCheckoutData] = useState<{
           {!selectedFarmer ? (
             <div className="text-center py-12 text-gray-400">Silakan pilih petani di panel kiri.</div>
           ) : viewMode === "checkout" ? (
-            <TransactionPanel 
-  farmerId={selectedFarmer.id} 
+// PenyaluranPage.tsx
+
+<TransactionPanel 
+  farmerId={selectedFarmer.user_id || selectedFarmer.user?.id} 
   grandTotalCost={checkoutData.totalCost}
   items={checkoutData.items}
   onBack={() => setViewMode("detail")}

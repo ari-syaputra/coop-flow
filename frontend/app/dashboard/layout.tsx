@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import Script from "next/script";
 import Sidebar from "../components/dashboard/Sidebar";
 import Navbar from "../components/dashboard/Navbar";
 import { useAuthAction } from "@/app/hooks/useAuthAction";
@@ -23,7 +24,6 @@ export default function AdminKoperasiLayout({ children }: { children: React.Reac
     const currentRole = getCookie("user_role");
     setRole(currentRole);
 
-    // 1. Ambil nama asli dari localStorage jika tersedia
     let realName = "";
     const storedProfile = localStorage.getItem("user_profile");
     if (storedProfile) {
@@ -55,22 +55,43 @@ export default function AdminKoperasiLayout({ children }: { children: React.Reac
         adminName: realName || "Budi Santoso", 
         roleName: "Admin Lapangan" 
       });
+    } else if (currentRole === "petani") {
+      setProfile({ 
+        adminName: realName || "Slamet Riyadi", 
+        roleName: "Petani" 
+      });
     }
+
+    // Membersihkan sisa elemen widget bawaan UserWay jika user berpindah halaman layout
+    return () => {
+      const userWayWidget = document.getElementById("accessibilityWidget");
+      if (userWayWidget) userWayWidget.remove();
+      
+      const userWayEmbed = document.querySelector('script[src*="userway.org"]');
+      if (userWayEmbed) userWayEmbed.remove();
+    };
   }, []);
 
   if (!role) {
     return <div className="min-h-screen bg-[#f8fafc]" />;
   }
 
-  // Menentukan apakah user merupakan role yang tidak menggunakan sidebar (admin-lapangan ATAU dinas-pertanian)
+  // Tambahkan role "petani" di sini agar sidebar di-hide
   const hideSidebar =
     role === "admin-lapangan" ||
     role === "dinas-pertanian" ||
-    role === "kemenko-pangan";
+    role === "kemenko-pangan" ||
+    role === "petani";
 
   return (
     <div className="flex min-h-screen bg-[#f8fafc] text-zinc-800 antialiased font-sans">
-      {/* Sidebar disembunyikan jika role termasuk dalam kategori hideSidebar */}
+      {/* ID akun UserWay Anda telah diterapkan di bawah ini */}
+      <Script
+        src="https://cdn.userway.org/widget.js"
+        data-account="m6NNwifJHR"
+        strategy="afterInteractive"
+      />
+
       {!hideSidebar && (
         <Sidebar handleLogout={logout} role={role} isOpen={isSidebarOpen} />
       )}
@@ -84,13 +105,8 @@ export default function AdminKoperasiLayout({ children }: { children: React.Reac
           toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
         />
 
-        {/* Jika berstatus hideSidebar, layout menggunakan padding simetris penuh (px-6 md:px-12) */}
-        <div
-          className={`w-full mt-8 ${hideSidebar ? "px-4 md:px-6" : "px-6 md:px-10"}`}
-        >
-          <div
-            className={`w-full mx-auto ${hideSidebar ? "max-w-none" : "max-w-[1600px]"}`}
-          >
+        <div className={`w-full mt-8 ${hideSidebar ? "px-4 md:px-12" : "px-6 md:px-10"}`}>
+          <div className={`w-full mx-auto ${hideSidebar ? "max-w-none" : "max-w-[1600px]"}`}>
             {children}
           </div>
         </div>

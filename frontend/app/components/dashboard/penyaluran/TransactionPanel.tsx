@@ -77,8 +77,17 @@ export default function TransactionPanel({
     return !rawId || isNaN(Number(rawId)) || Number(rawId) <= 0;
   });
 
-  const handlePayment = async () => {
+const handlePayment = async () => {
+    // 🔍 LOG 1: Cek Input Awal & State
+    console.log("=== [1] MEMULAI PROSES PEMBAYARAN ===");
+    console.log("Farmer ID:", farmerId);
+    console.log("Payment Method:", paymentMethod);
+    console.log("Amount Paid:", amountPaid);
+    console.log("Grand Total Cost:", grandTotalCost);
+    console.log("Raw Active Bags Items:", activeBags);
+
     if (paymentMethod === "Tunai" && amountPaid < grandTotalCost) {
+      console.warn("⚠️ Pembayaran dibatalkan: Nominal tunai kurang.");
       setErrorMessage("Nominal pembayaran tunai kurang dari total harga!");
       return;
     }
@@ -107,11 +116,12 @@ export default function TransactionPanel({
 
     let dataCacatTerdeteksi = false;
 
-    activeBags.forEach((bag) => {
+    activeBags.forEach((bag, index) => {
       const rawId = bag.fertilizer_id;
       const sanitizedFertilizerId = rawId && !isNaN(Number(rawId)) ? Number(rawId) : 0;
 
       if (sanitizedFertilizerId === 0) {
+        console.error(`❌ Item ke-${index} memiliki fertilizer_id tidak valid:`, bag);
         dataCacatTerdeteksi = true;
       }
 
@@ -144,6 +154,7 @@ export default function TransactionPanel({
 
     // BLOKIR SEBELUM KELUAR REQUEST KE API JIKA DATA TIDAK VALID
     if (dataCacatTerdeteksi) {
+      console.error("⛔ Transaksi diblokir di frontend karena ada ID pupuk cacat (0/null).");
       setLoading(false);
       Swal.fire({
         title: "Aplikasi Memblokir Transaksi",
@@ -161,9 +172,16 @@ export default function TransactionPanel({
       items: optimizedItems 
     };
 
+    // 🔍 LOG 2: Cek Payload Sebelum Dikirim ke Backend
+    console.log("=== [2] PAYLOAD FINAL YANG DIKIRIM KE BACKEND ===");
+    console.log(JSON.stringify(payload, null, 2));
+
     try {
       const response = await api.post('/cooperative/transaction/transactionsfix', payload);
       
+      // 🔍 LOG 3: Response Berhasil
+      console.log("=== [3] RESPON SKSES DARI BACKEND ===", response.data);
+
       if (response.data.success) {
         const tglHariIni = new Date().toLocaleDateString("id-ID", {
           day: "2-digit",
@@ -230,12 +248,20 @@ export default function TransactionPanel({
         });
       }
     } catch (error: any) {
+      // 🔍 LOG 4: Catch Error & Detail Validasi Server
+      console.error("=== [4] ERROR SAAT REQUEST KE BACKEND ===", error);
+
       let serverMessage = "Terjadi kesalahan saat memproses pembayaran.";
       let detailValidationErrors = "";
 
       if (error.response) {
+        console.error("Status Error Server:", error.response.status);
+        console.error("Data Error Server:", error.response.data);
+
         if (error.response.status === 422 && error.response.data.errors) {
           const errorsObj = error.response.data.errors;
+          console.table(errorsObj); // Menampilkan tabel error validasi yang rapi di console
+          
           detailValidationErrors = Object.keys(errorsObj)
             .map(key => `<li><b>${key}:</b> ${errorsObj[key].join(", ")}</li>`)
             .join("");
@@ -271,7 +297,6 @@ export default function TransactionPanel({
       setLoading(false);
     }
   };
-
   return (
     <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm space-y-6 animate-in fade-in duration-200">
       {/* Header Panel */}

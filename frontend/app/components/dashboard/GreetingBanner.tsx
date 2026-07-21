@@ -77,7 +77,7 @@ export default function GreetingBanner({ adminName }: GreetingBannerProps) {
 
   return (
     // Mengunci tinggi grid utama menjadi h-[166px] sesuai standar Figma Anda
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch w-full h-auto lg:h-[166px]">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-stretch w-full h-auto lg:h-[166px]">
       
       {/* SISI KIRI: Banner Selamat Pagi/Siang/Sore/Malam */}
       <div 

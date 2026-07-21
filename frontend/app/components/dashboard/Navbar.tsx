@@ -53,7 +53,8 @@ export default function Navbar({
   const isMandatoryFullLayout =
     currentRole === "admin-lapangan" ||
     currentRole === "dinas-pertanian" ||
-    currentRole === "kemenko-pangan";
+    currentRole === "kemenko-pangan" ||
+    currentRole === "petani";
   
   // Menentukan class warna navbar secara dinamis berdasarkan rumpun layout
   const headerBgClass = isMandatoryFullLayout 
@@ -64,7 +65,7 @@ export default function Navbar({
     <header className={`h-18 ${headerBgClass} flex items-center justify-between px-6 lg:px-12 sticky top-0 z-50 shadow-sm shadow-zinc-100/50 font-sans transition-colors duration-200`}>
       
       {isMandatoryFullLayout ? (
-        /* Sisi Kiri untuk role tanpa sidebar (admin-lapangan & dinas-pertanian) */
+        /* Sisi Kiri untuk role tanpa sidebar (admin-lapangan, dinas-pertanian, kemenko-pangan & petani) */
         <div className="flex items-center space-x-3">
           <div className="h-10 w-10 flex items-center justify-center rounded-xl bg-linear-to-br from-green-500 to-emerald-600 p-1.5 shadow-md shadow-emerald-100">
             <img src="/logonobg.png" alt="Coopflow" className="h-full w-full object-contain brightness-0 invert" />

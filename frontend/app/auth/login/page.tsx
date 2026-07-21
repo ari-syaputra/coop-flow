@@ -8,7 +8,8 @@ import { FiBarChart2, FiUsers, FiTrendingUp } from "react-icons/fi";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  // Mengubah nama variabel state agar lebih representatif (bisa NIK / Email)
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -27,17 +28,23 @@ export default function LoginPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!email || !password) {
+    if (!identifier || !password) {
       Toast.fire({
         icon: "warning",
-        title: "Email dan password wajib diisi.",
+        title: "Email / NIK dan password wajib diisi.",
       });
       return;
     }
 
     try {
       setLoading(true);
-      const response = await api.post("/login", { email, password });
+      // Mengirimkan identifier baik ke key login_identifier maupun email agar kompatibel
+      const response = await api.post("/login", {
+        login_identifier: identifier,
+        email: identifier,
+        password: password,
+      });
+
       const { access_token, user } = response.data;
 
       // 1. Simpan data ke LocalStorage untuk Client-Side State
@@ -90,7 +97,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col md:flex-row bg-white">
+    <div className="min-h-screen w-full flex flex-col md:flex-row bg-white font-sans">
       {/* ========================================== */}
       {/* SISI KIRI: Brand Panel Gambar Premium      */}
       {/* ========================================== */}
@@ -120,7 +127,6 @@ export default function LoginPage() {
         </div>
 
         {/* 2. KONTEN TENGAH: Slogan & Deskripsi Utama */}
-        {/* mb-auto DIHAPUS agar tidak mengunci konten di bawahnya ke dasar viewport */}
         <div className="z-10 max-w-2xl mt-16 md:mt-36">
           <h1
             className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-white leading-[1.2] tracking-tight mb-4"
@@ -141,9 +147,8 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* 3. KONTEN BAWAH: Tiga Kotak Informasi Statis (Stats Badges) */}
-        {/* Menggunakan mt-12 agar posisinya otomatis naik pas di bawah teks deskripsi */}
-        <div className="z-10 grid grid-cols-1 sm:grid-cols-3 gap-4 pt-6 border-t border-white/10 mt-56">
+        {/* 3. KONTEN BAWAH: Badges Statistics */}
+        <div className="z-10 grid grid-cols-1 sm:grid-cols-3 gap-4 pt-6 border-t border-white/10 mt-20 md:mt-auto">
           {/* Badge 1: Akurasi GIS */}
           <div className="flex items-center gap-3 bg-white/5 backdrop-blur-sm p-3.5 rounded-xl border border-white/5">
             <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm shrink-0">
@@ -193,7 +198,7 @@ export default function LoginPage() {
       {/* SISI KANAN: Form Komponen Masuk            */}
       {/* ========================================== */}
       <div className="w-full md:w-2/5 flex items-center justify-center p-6 md:p-10 bg-gray-50">
-        <div className="w-full max-w-2xl bg-white p-12 md:p-16 rounded-2xl shadow-[0_15px_50px_rgba(0,0,0,0.07)] border border-gray-100">
+        <div className="w-full max-w-2xl bg-white p-8 md:p-12 rounded-2xl shadow-[0_15px_50px_rgba(0,0,0,0.07)] border border-gray-100">
           <div className="flex flex-col items-center text-center mb-8">
             <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mb-4 border border-green-100">
               <img
@@ -207,32 +212,32 @@ export default function LoginPage() {
               Selamat datang kembali!
             </h2>
             <p className="text-sm text-gray-500">
-              Silakan masuk untuk mengelola COOP-FLOW
+              Silakan masuk ke akun COOP-FLOW Anda
             </p>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-5">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">
-                Email
+              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
+                Email / NIK (16 Digit)
               </label>
               <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="masukkan alamat email anda"
-                className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-[#005c27] focus:bg-white text-gray-900 transition-all text-sm"
+                type="text"
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
+                placeholder="Masukkan Email atau NIK KTP Anda"
+                className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-[#005c27] focus:bg-white text-gray-900 transition-all text-sm font-medium"
               />
             </div>
 
             <div>
               <div className="flex justify-between items-center mb-2">
-                <label className="block text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider">
                   Password
                 </label>
                 <a
                   href="#"
-                  className="text-base text-[#005c27] hover:underline font-semibold"
+                  className="text-xs text-[#005c27] hover:underline font-bold"
                 >
                   Lupa password?
                 </a>
@@ -241,13 +246,13 @@ export default function LoginPage() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="masukkan password anda"
-                className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-[#005c27] focus:bg-white text-gray-900 transition-all text-sm"
+                placeholder="Masukkan password Anda"
+                className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-[#005c27] focus:bg-white text-gray-900 transition-all text-sm font-medium"
               />
             </div>
 
             <div className="flex items-center text-sm pb-2">
-              <label className="flex items-center text-gray-600 cursor-pointer select-none">
+              <label className="flex items-center text-gray-600 cursor-pointer select-none text-xs font-semibold">
                 <input
                   type="checkbox"
                   className="mr-2 rounded border-gray-300 accent-[#005c27] w-4 h-4"
@@ -264,7 +269,7 @@ export default function LoginPage() {
               {loading ? "Memproses Masuk..." : "Sign In"}
             </button>
 
-            <div className="relative flex py-4 items-center text-xs text-gray-400 uppercase font-semibold">
+            <div className="relative flex py-3 items-center text-xs text-gray-400 uppercase font-semibold">
               <div className="flex-grow border-t border-gray-200"></div>
               <span className="flex-shrink mx-4">Atau</span>
               <div className="flex-grow border-t border-gray-200"></div>
@@ -273,7 +278,7 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={() => router.push("/auth/register")}
-              className="w-full py-3 border-2 border-gray-200 text-gray-700 font-bold rounded-full hover:bg-gray-50 active:scale-[0.99] transition duration-200 uppercase tracking-wider text-xs"
+              className="w-full py-3.5 border-2 border-gray-200 text-gray-700 font-bold rounded-full hover:bg-gray-50 active:scale-[0.99] transition duration-200 uppercase tracking-wider text-xs"
             >
               Daftar Akun Baru
             </button>

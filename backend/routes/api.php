@@ -143,6 +143,9 @@ Route::middleware('auth:sanctum')->group(function () {
     | Manajemen Lahan, Petani & Wilayah
     |--------------------------------------------------------------------------
     */
+
+    // API Khusus Dashboard Petani (Mobile UI)
+    Route::get('/farmer/dashboard-summary', [FarmerController::class, 'getDashboardSummary']);
     Route::apiResource('farmer-groups', FarmerGroupController::class);
     Route::post('farmers/{id}', [FarmerController::class, 'update']);
     Route::apiResource('farmers', FarmerController::class);

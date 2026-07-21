@@ -83,7 +83,7 @@ export default function GreetingBanner({ formattedDate }: GreetingBannerProps) {
 
   return (
     <div 
-      className="w-full h-[180px] sm:h-[160px] rounded-2xl p-6 sm:px-10 flex flex-col sm:flex-row sm:items-center justify-between relative overflow-hidden bg-cover bg-center border border-slate-100 shadow-sm"
+      className="w-full h-[180px] sm:h-[160px] rounded-2xl p-6 sm:px-6 flex flex-col sm:flex-row sm:items-center justify-between relative overflow-hidden bg-cover bg-center border border-slate-100 shadow-sm"
       style={{ backgroundImage: `url('/bannercooperative.png')` }}
     >
       {/* SISI KIRI: Ucapan & Identitas Koperasi Hasil Extrak DB */}
@@ -103,7 +103,7 @@ export default function GreetingBanner({ formattedDate }: GreetingBannerProps) {
       </div>
 
       {/* SISI KANAN: Card Cuaca Minimalis Glassmorphism */}
-      <div className="z-10 mt-4 sm:mt-0 bg-white/40 backdrop-blur-md border border-white/40 px-6 py-4 rounded-2xl flex flex-col justify-center min-w-[180px] shadow-inner">
+      <div className="z-10 mt-4 sm:mt-0 bg-white/60 border border-white/40 px-6 py-4 rounded-2xl flex flex-col justify-center min-w-[180px] shadow-inner">
         <span className="text-[10px] font-extrabold text-emerald-950/60 uppercase tracking-wider block mb-1">
           Cuaca hari ini
         </span>

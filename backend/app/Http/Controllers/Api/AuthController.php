@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\Farmer;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 
@@ -18,95 +20,133 @@ class AuthController extends Controller
         // 1. Validasi Input Data
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
+            'email' => 'required|string|email|max:255|unique:users,email',
             'password' => 'required|string|min:8|confirmed',
-            'phone' => 'nullable|string|unique:users',
+            'phone' => 'nullable|string|unique:users,phone',
             'address' => 'nullable|string',
-            'role' => 'nullable|string|in:ketua-poktan,petani,dinas-pertanian',
+            'role' => 'nullable|string|in:ketua-poktan,petani,dinas-pertanian,petugas-koperasi,admin-lapangan,kemenko-pangan',
             'cooperative_id' => 'required_if:role,petani,ketua-poktan|exists:cooperatives,id',
             
-            // --- Tambahan Validasi Wilayah ---
-            // Menggunakan 'size' karena panjang karakter dari Laravolt selalu tetap
+            // Validasi khusus jika role petani (NIK wajib diisi)
+            'nik' => 'required_if:role,petani|nullable|string|digits:16|unique:farmers,nik',
+
+            // --- Validasi Kode Wilayah ---
             'province_code' => 'nullable|string|size:2',
             'city_code' => 'nullable|string|size:4',
             'district_code' => 'nullable|string|size:7',
             'village_code' => 'nullable|string|size:10',
-            // ---------------------------------
         ], [
-            'cooperative_id.required_if' => 'Petani atau Ketua Poktan wajib memilih Koperasi tempat Anda bernaung.'
+            'cooperative_id.required_if' => 'Petani atau Ketua Poktan wajib memilih Koperasi tempat Anda bernaung.',
+            'nik.required_if' => 'NIK wajib diisi untuk pendaftaran Petani.',
+            'nik.digits' => 'NIK harus berjumlah 16 digit.',
+            'nik.unique' => 'NIK sudah terdaftar dalam sistem.'
         ]);
 
         if ($validator->fails()) {
             return response()->json($validator->errors(), 422);
         }
 
-        // 2. Simpan Data User ke Database dengan data wilayah
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'phone' => $request->phone,
-            'address' => $request->address,
-            'cooperative_id' => $request->role === 'dinas-pertanian' ? null : $request->cooperative_id,
-            
-            // --- Simpan Kode Wilayah ---
-            'province_code' => $request->province_code,
-            'city_code' => $request->city_code,
-            'district_code' => $request->district_code,
-            'village_code' => $request->village_code,
-            // ---------------------------
-        ]);
-
-        // 3. Berikan Role menggunakan Spatie Permission
         $roleName = $request->role ?? 'petani';
-        $user->assignRole($roleName);
 
-        // 4. Buat Token Akses Sanctum
-        $token = $user->createToken('auth_token')->plainTextToken;
+        // Petani langsung APPROVED, role lain default PENDING
+        $status = ($roleName === 'petani') ? 'APPROVED' : 'PENDING';
 
-        return response()->json([
-            'message' => 'Registrasi berhasil!',
-            'access_token' => $token,
-            'token_type' => 'Bearer',
-            'user' => $user->load(['roles', 'province', 'city', 'district', 'village']) 
-        ], 201);
+        DB::beginTransaction();
+        try {
+            // 2. Simpan Data User ke Database
+            $user = User::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'password' => Hash::make($request->password),
+                'phone' => $request->phone,
+                'address' => $request->address,
+                'status' => $status,
+                'cooperative_id' => in_array($roleName, ['dinas-pertanian', 'kemenko-pangan']) ? null : $request->cooperative_id,
+                
+                'province_code' => $request->province_code,
+                'city_code' => $request->city_code,
+                'district_code' => $request->district_code,
+                'village_code' => $request->village_code,
+            ]);
+
+            // 3. Simpan data detail Petani jika role-nya Petani
+            if ($roleName === 'petani') {
+                Farmer::create([
+                    'user_id' => $user->id,
+                    'nik' => $request->nik,
+                    'province_id' => $request->province_code,
+                    'city_id' => $request->city_code,
+                    'district_id' => $request->district_code,
+                    'village_id' => $request->village_code,
+                ]);
+            }
+
+            // 4. Berikan Role Spatie
+            $user->assignRole($roleName);
+
+            DB::commit();
+
+            // 5. Buat Token Akses Sanctum
+            $token = $user->createToken('auth_token')->plainTextToken;
+
+            return response()->json([
+                'message' => 'Registrasi berhasil!',
+                'access_token' => $token,
+                'token_type' => 'Bearer',
+                'user' => $user->load(['roles', 'farmer', 'cooperative']) 
+            ], 201);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Gagal melakukan registrasi: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
-     * API Login Pengguna
+     * API Login Pengguna (Bisa menggunakan NIK atau Email)
      */
     public function login(Request $request)
     {
-        // 1. Validasi Input Login
+        // 1. Ambil input login (Bisa dari payload 'login_identifier', 'email', atau 'nik')
+        $identifier = $request->input('login_identifier') ?? $request->input('email') ?? $request->input('nik');
+
+        if (!$identifier) {
+            return response()->json([
+                'message' => 'Email atau NIK wajib diisi.'
+            ], 422);
+        }
+
         $request->validate([
-            'email' => 'required|string|email',
             'password' => 'required|string',
         ]);
 
-        // 2. Cari User Berdasarkan Email
-        $user = User::where('email', $request->email)->first();
+        // 2. Cari User berdasarkan Email ATAU NIK di tabel farmers
+        $user = User::where('email', $identifier)
+            ->orWhereHas('farmer', function ($query) use ($identifier) {
+                $query->where('nik', $identifier);
+            })
+            ->first();
 
-        // 3. Cek Ketersediaan User dan Kecocokan Password
+        // 3. Cek Ketersediaan User dan Password
         if (!$user || !Hash::check($request->password, $user->password)) {
             return response()->json([
-                'message' => 'Email atau password salah.'
+                'message' => 'Email/NIK atau password salah.'
             ], 401);
         }
 
         // ==========================================
-        // 4. PENGECEKAN STATUS AKUN (BLOKIR AKSES)
+        // 4. PENGECEKAN STATUS AKUN (Petani Dikecualikan)
         // ==========================================
-        
-        if ($user->hasAnyRole(['petani', 'petugas-koperasi', 'admin-lapangan'])) {
+        if ($user->hasAnyRole(['petugas-koperasi', 'admin-lapangan'])) {
             
-            // Tolak jika status masih PENDING
             if ($user->status === 'PENDING') {
                 return response()->json([
                     'message' => 'Gagal masuk: Akun Koperasi Anda masih dalam proses verifikasi oleh Kemenko Pangan.'
                 ], 403);
             }
 
-            // Tolak jika status REJECTED
             if ($user->status === 'REJECTED') {
                 return response()->json([
                     'message' => 'Gagal masuk: Pendaftaran Koperasi ditolak. Alasan: ' . ($user->rejection_reason ?? 'Silakan hubungi Kemenko Pangan.')
@@ -115,23 +155,20 @@ class AuthController extends Controller
         }
 
         // ==========================================
-        // Jika lolos (status ACTIVE atau role lain yang tidak butuh verifikasi)
+        // 5. Generasi Token & Kirim Respon Sukses
         // ==========================================
-
-        // 5. Buat Token Baru
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
             'message' => 'Login berhasil!',
             'access_token' => $token,
             'token_type' => 'Bearer',
-            // Tambahkan relasi wilayah ke dalam response login
-            'user' => $user->load(['roles', 'cooperative', 'province', 'city', 'district', 'village'])
+            'user' => $user->load(['roles', 'farmer', 'cooperative', 'province', 'city', 'district', 'village'])
         ]);
     }
 
     /**
-     * API Logout Pengguna (Hapus Token)
+     * API Logout Pengguna
      */
     public function logout(Request $request)
     {

@@ -20,7 +20,7 @@ return new class extends Migration
             $table->string('nik_cooperative', 50)->unique()->nullable();
             $table->string('legal_entity_type')->nullable();
             $table->string('legal_entity_number')->nullable();
-            $table->date('established_date')->nullable();
+            $table->date('established_date')->nullable(); 
             $table->string('npwp', 50)->nullable();
             
             $table->string('address')->nullable();
