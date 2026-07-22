@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Fertilizer;
 use App\Models\Transaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -71,12 +72,8 @@ class TransactionController extends Controller
         }
     }
 
-    /**
-     * Simpan transaksi baru (POST).
-     */
     public function store(Request $request)
     {
-        // 1. Validasi Input Data
         $validator = Validator::make($request->all(), [
             'farmer_id' => 'required|exists:users,id',
             'payment_method' => 'required|string',
@@ -87,8 +84,6 @@ class TransactionController extends Controller
             'items.*.price_per_kg' => 'required|numeric|min:0',
             'items.*.subtotal' => 'required|numeric|min:0',
             'items.*.original_recommended_kg' => 'required|numeric|min:0',
-            
-            // Validasi metadata lahan & lingkungan untuk ML
             'items.*.land_id' => 'required|exists:lands,id',
             'items.*.analysis_meta_snapshot.luas_lahan_hektar' => 'required|numeric|min:0',
             'items.*.analysis_meta_snapshot.jenis_komoditas' => 'required|string',
@@ -106,20 +101,36 @@ class TransactionController extends Controller
             ], 422);
         }
 
-        // 2. Eksekusi Database Transaction
         try {
             $transactionResult = DB::transaction(function () use ($request) {
                 
-                // A. Simpan Transaksi Utama (Finansial)
                 $transaction = Transaction::create([
                     'farmer_id' => $request->farmer_id,
                     'payment_method' => $request->payment_method,
                     'amount_paid' => $request->amount_paid,
                 ]);
 
-                // B. Iterasi item pembelian
                 foreach ($request->items as $item) {
-                    // Simpan Detail Pembelian
+
+                    $fertilizer = Fertilizer::where('id', $item['fertilizer_id'])->lockForUpdate()->first();
+
+                    if (!$fertilizer) {
+                        throw new \Exception("Pupuk dengan ID {$item['fertilizer_id']} tidak ditemukan.");
+                    }
+                    if ($fertilizer->current_stock_kg < $item['actual_purchased_kg']) {
+                        throw new \Exception("Stok pupuk '{$fertilizer->name}' tidak mencukupi (Tersedia: {$fertilizer->current_stock_kg} Kg, Dibeli: {$item['actual_purchased_kg']} Kg).");
+                    }
+
+                    $newStock = $fertilizer->current_stock_kg - $item['actual_purchased_kg'];
+                    $minStock = $fertilizer->minimum_stock_kg ?? 1000;
+                    $newStatus = ($newStock <= 0) ? 'habis' : (($newStock <= $minStock) ? 'menipis' : 'tersedia');
+
+                    $fertilizer->update([
+                        'current_stock_kg' => $newStock,
+                        'status' => $newStatus,
+                    ]);
+                    // ----------------------------------------
+
                     $transaction->items()->create([
                         'fertilizer_id' => $item['fertilizer_id'],
                         'actual_purchased_kg' => $item['actual_purchased_kg'],
@@ -127,7 +138,6 @@ class TransactionController extends Controller
                         'subtotal' => $item['subtotal'],
                     ]);
 
-                    // C. Simpan Log Snapshot ke Tabel ML
                     $meta = $item['analysis_meta_snapshot'];
                     
                     $transaction->mlLogs()->create([
@@ -149,7 +159,7 @@ class TransactionController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Transaksi berhasil diproses dan dicatatkan ke log ML!',
+                'message' => 'Transaksi berhasil diproses, stok pupuk diperbarui, dan dicatatkan ke log ML!',
                 'data' => $transactionResult
             ], 201);
 
