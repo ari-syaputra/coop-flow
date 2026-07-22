@@ -9,7 +9,6 @@ use App\Models\TransactionItem;
 use App\Models\Fertilizer;
 use App\Models\Plant;
 use App\Models\AiPrediction;
-use App\Models\InventoryMutation;
 use App\Models\Cooperative;
 use Illuminate\Http\JsonResponse;
 use Carbon\Carbon;
@@ -20,7 +19,8 @@ class CooperativeDashboardController extends Controller
     public function getKoperasiData(): JsonResponse
     {
         // 1. Ambil Koperasi ID dari User yang login
-        $cooperativeId = auth()->user()->cooperative_id ?? 1; 
+        $user = auth()->user();
+        $cooperativeId = $user->cooperative_id ?? 1; 
         
         // Ambil data kapasitas gudang riil dari model Cooperative
         $cooperative = Cooperative::find($cooperativeId);
@@ -30,20 +30,44 @@ class CooperativeDashboardController extends Controller
         $startOfMonth = Carbon::now()->startOfMonth();
 
         // ==========================================
-        // 1. AGREGASI METRIK (WIDGET UTAMA)
+        // 1. QUERY DASAR PETANI TERFILTER
         // ==========================================
-        $totalPetani = Farmer::count(); 
-        $petaniBulanLalu = Farmer::where('created_at', '<', $startOfMonth)->count();
+        // Menyesuaikan logika filter dari FarmerController (Petani berdasarkan cooperative_id di tabel User)
+        $farmerQuery = Farmer::whereHas('user', function ($q) use ($cooperativeId) {
+            $q->where('cooperative_id', $cooperativeId);
+        });
+
+        // ==========================================
+        // 2. AGREGASI METRIK (WIDGET UTAMA)
+        // ==========================================
+        // Metrik Petani (Terfilter Koperasi)
+        $totalPetani = (clone $farmerQuery)->count(); 
+        $petaniBulanLalu = (clone $farmerQuery)->where('created_at', '<', $startOfMonth)->count();
         $kenaikanPetani = $totalPetani - $petaniBulanLalu;
 
-        $totalLahan = Land::sum('area');
-        $tanamanAktif = Plant::count(); 
-        $transaksiMasukNominal = Transaction::whereDate('created_at', $today)->sum('amount_paid');
+        // Metrik Lahan & Tanaman (Hanya lahan milik petani koperasi ini)
+        $totalLahan = Land::whereHas('farmer.user', function ($q) use ($cooperativeId) {
+            $q->where('cooperative_id', $cooperativeId);
+        })->sum('area');
+
+        $tanamanAktif = Plant::whereHas('land.farmer.user', function ($q) use ($cooperativeId) {
+            $q->where('cooperative_id', $cooperativeId);
+        })->count(); 
+
+        // Metrik Transaksi & Stok
+        $transaksiMasukNominal = Transaction::whereHas('items.fertilizer', function ($q) use ($cooperativeId) {
+                $q->where('cooperative_id', $cooperativeId);
+            })
+            ->whereDate('created_at', $today)
+            ->sum('amount_paid');
 
         $totalStokKg = Fertilizer::where('cooperative_id', $cooperativeId)->sum('current_stock_kg');
         $totalStokTon = round($totalStokKg / 1000, 2);
 
-        $permintaanHariIniKarung = TransactionItem::whereHas('transaction', function($q) use ($today) {
+        $permintaanHariIniKarung = TransactionItem::whereHas('fertilizer', function($q) use ($cooperativeId) {
+                $q->where('cooperative_id', $cooperativeId);
+            })
+            ->whereHas('transaction', function($q) use ($today) {
                 $q->whereDate('created_at', $today);
             })
             ->join('fertilizers', 'transaction_items.fertilizer_id', '=', 'fertilizers.id')
@@ -51,7 +75,7 @@ class CooperativeDashboardController extends Controller
             ->value('total_karung') ?? 0;
 
         // ==========================================
-        // 2. PREDIKSI KEBUTUHAN PUPUK (AI SECTION)
+        // 3. PREDIKSI KEBUTUHAN PUPUK (AI SECTION)
         // ==========================================
         $aiPredictions = AiPrediction::with('fertilizer:id,name')
             ->where('cooperative_id', $cooperativeId)
@@ -65,16 +89,15 @@ class CooperativeDashboardController extends Controller
                 ];
             });
 
-       // ==========================================
-        // 3. TREN STOK & DISTRIBUSI (6 BULAN TERAKHIR) - DIPERBAIKI
+        // ==========================================
+        // 4. TREN STOK & DISTRIBUSI (6 BULAN TERAKHIR)
         // ==========================================
         $monthsRange = collect(range(6, 0))->reverse(); 
 
-        // A. Data Tren Stok Pupuk (Estimasi berdasarkan stok saat ini + distribusi mundur)
+        // A. Data Tren Stok Pupuk
         $trenStokPupuk = $monthsRange->map(function ($i) use ($cooperativeId, $totalStokKg) {
             $date = Carbon::now()->subMonths($i);
             
-            // Hitung jumlah yang keluar setelah bulan tersebut
             $distribusiSetelah = TransactionItem::whereHas('fertilizer', function($q) use ($cooperativeId) {
                     $q->where('cooperative_id', $cooperativeId);
                 })
@@ -89,7 +112,7 @@ class CooperativeDashboardController extends Controller
             ];
         })->values();
 
-        // B. Data Tren Distribusi Perbulan (Line Chart Biru)
+        // B. Data Tren Distribusi Perbulan
         $trenDistribusiPerbulan = $monthsRange->map(function ($i) use ($cooperativeId) {
             $date = Carbon::now()->subMonths($i);
             
@@ -109,7 +132,7 @@ class CooperativeDashboardController extends Controller
         })->values();
 
         // ==========================================
-        // 4. KONDISI STOK GUDANG BULAN INI (BAR CHART KANAN)
+        // 5. KONDISI STOK GUDANG BULAN INI (BAR CHART KANAN)
         // ==========================================
         $colorPalettes = ['#22c55e', '#1e3a8a', '#a21caf', '#eab308', '#f97316', '#06b6d4'];
         $stokGudangBulanIni = Fertilizer::where('cooperative_id', $cooperativeId)
@@ -122,7 +145,6 @@ class CooperativeDashboardController extends Controller
                     })
                     ->sum('actual_purchased_kg');
 
-                // Jika packaging_size_kg di model Fertilizer adalah 0, kita bagi dengan 50kg (asumsi 1 sak)
                 $pembagi = $item->packaging_size_kg > 0 ? $item->packaging_size_kg : 50;
                 $jumlahPermintaan = round($totalPermintaanBulanIni / $pembagi);
 
@@ -136,9 +158,12 @@ class CooperativeDashboardController extends Controller
             ->values();
 
         // ==========================================
-        // 5. PETA SEBARAN (GEOJSON STANDARD FORMAT)
+        // 6. PETA SEBARAN (DIFILTER BERDASARKAN KOPERASI PETANI)
         // ==========================================
         $petaSebaran = Land::select('id', 'land_name', 'center_latitude', 'center_longitude', 'area')
+            ->whereHas('farmer.user', function ($q) use ($cooperativeId) {
+                $q->where('cooperative_id', $cooperativeId);
+            })
             ->whereNotNull('center_latitude')
             ->whereNotNull('center_longitude')
             ->get()
@@ -161,7 +186,7 @@ class CooperativeDashboardController extends Controller
             });
 
         // ==========================================
-        // 6. KONDISI STOK GUDANG UTAMA (TABEL UTAMA)
+        // 7. KONDISI STOK GUDANG UTAMA (TABEL UTAMA)
         // ==========================================
         $stokGudang = Fertilizer::where('cooperative_id', $cooperativeId)->get()->map(function ($item) use ($kapasitasGudangTon) {
             $status = 'Aman';
@@ -187,58 +212,51 @@ class CooperativeDashboardController extends Controller
         });
 
         // ==========================================
-// 7. AKTIVITAS TERBARU (DIAMBIL DARI TRANSAKSI PETANI)
-// ==========================================
-// Kita ambil transaksi terbaru yang berelasi dengan petani & item pupuknya
-$aktivitasTerbaru = Transaction::with(['farmer', 'items.fertilizer'])
-    ->whereHas('items.fertilizer', function($q) use ($cooperativeId) {
-        // Memastikan transaksi ini terkait dengan pupuk milik koperasi bersangkutan
-        $q->where('cooperative_id', $cooperativeId);
-    })
-    ->latest()
-    ->take(5) // Mengambil 5 transaksi teratas untuk di-breakdown ke item
-    ->get()
-    ->flatMap(function($transaction) {
-        // Karena 1 transaksi bisa punya banyak item pupuk, kita pecah menggunakan flatMap
-        return $transaction->items->map(function($item) use ($transaction) {
-            $namaPetani = $transaction->farmer->name ?? 'Petani';
-            $namaPupuk = $item->fertilizer->name ?? 'Pupuk';
-            
-            // Konversi kg ke Ton jika jumlahnya banyak, atau gunakan satuan Karung/Bags jika cocok
-            $jumlahBeliKg = $item->actual_purchased_kg;
-            $satuan = $jumlahBeliKg >= 1000 
-                ? round($jumlahBeliKg / 1000, 1) . " Ton" 
-                : round($jumlahBeliKg) . " Kg";
+        // 8. AKTIVITAS TERBARU (TRANSAKSI PETANI TERFILTER)
+        // ==========================================
+        $aktivitasTerbaru = Transaction::with(['farmer', 'items.fertilizer'])
+            ->whereHas('items.fertilizer', function($q) use ($cooperativeId) {
+                $q->where('cooperative_id', $cooperativeId);
+            })
+            ->latest()
+            ->take(5)
+            ->get()
+            ->flatMap(function($transaction) {
+                return $transaction->items->map(function($item) use ($transaction) {
+                    $namaPetani = $transaction->farmer->name ?? 'Petani';
+                    $namaPupuk = $item->fertilizer->name ?? 'Pupuk';
+                    
+                    $jumlahBeliKg = $item->actual_purchased_kg;
+                    $satuan = $jumlahBeliKg >= 1000 
+                        ? round($jumlahBeliKg / 1000, 1) . " Ton" 
+                        : round($jumlahBeliKg) . " Kg";
 
-            // Tentukan tipe secara acak/kondisional untuk visualisasi frontend
-            // Jika Anda punya kolom status di transaksi bisa dipakai, di sini kita buat variasi dinamis
-            $idUnik = $item->id;
-            if ($idUnik % 3 === 0) {
-                $tipe = 'persetujuan';
-                $judul = "Permintaan {$namaPupuk} disetujui";
-                $subjudul = "Oleh {$namaPetani} (" . ($transaction->payment_method ?? 'Cash') . ")";
-            } elseif ($idUnik % 3 === 1) {
-                $tipe = 'penerimaan';
-                $judul = "Gudang Menyalurkan {$satuan} {$namaPupuk}";
-                $subjudul = "Petani: {$namaPetani}";
-            } else {
-                // Contoh jika statusnya sukses disalurkan (truk biru)
-                $tipe = 'distribusi';
-                $judul = "Distribusi {$namaPupuk} ke Lahan Selesai";
-                $subjudul = "No. Transaksi: TRX-{$transaction->id}";
-            }
+                    $idUnik = $item->id;
+                    if ($idUnik % 3 === 0) {
+                        $tipe = 'persetujuan';
+                        $judul = "Permintaan {$namaPupuk} disetujui";
+                        $subjudul = "Oleh {$namaPetani} (" . ($transaction->payment_method ?? 'Cash') . ")";
+                    } elseif ($idUnik % 3 === 1) {
+                        $tipe = 'penerimaan';
+                        $judul = "Gudang Menyalurkan {$satuan} {$namaPupuk}";
+                        $subjudul = "Petani: {$namaPetani}";
+                    } else {
+                        $tipe = 'distribusi';
+                        $judul = "Distribusi {$namaPupuk} ke Lahan Selesai";
+                        $subjudul = "No. Transaksi: TRX-{$transaction->id}";
+                    }
 
-            return [
-                'id' => $item->id,
-                'tipe' => $tipe,
-                'judul' => $judul,
-                'subjudul' => $subjudul,
-                'waktu' => $transaction->created_at->diffForHumans()
-            ];
-        });
-    })
-    ->take(8) 
-    ->values();
+                    return [
+                        'id' => $item->id,
+                        'tipe' => $tipe,
+                        'judul' => $judul,
+                        'subjudul' => $subjudul,
+                        'waktu' => $transaction->created_at->diffForHumans()
+                    ];
+                });
+            })
+            ->take(8) 
+            ->values();
 
         // ==========================================
         // JSON RESPONSE COMPLETE
