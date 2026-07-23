@@ -29,7 +29,10 @@ COPY . .
 # Build Next.js untuk produksi
 RUN npm run build
 
+# Port default
 EXPOSE 3000
 
-# Jalankan server Next.js mode produksi di port dinamis Railway
-CMD ["npm", "run", "start", "--", "-p", "3000", "-H", "0.0.0.0"]
+ENV HOSTNAME="0.0.0.0"
+
+# Jalankan server
+CMD ["npm", "run", "start"]
