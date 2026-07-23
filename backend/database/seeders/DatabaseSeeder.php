@@ -17,10 +17,14 @@ class DatabaseSeeder extends Seeder
     {
         // Daftarkan seeder role dan user kita di sini
         $this->call([
-            InventorySeeder::class,
             RoleAndUserSeeder::class,
+            CooperativeSeeder::class,
+            CooperativeRegistrationSeeder::class,
+            FarmerGroupSeeder::class,
             FarmerSeeder::class,
+            InventorySeeder::class,
             ProcurementOrderSeeder::class,
+            TransactionSeeder::class,
         ]);
     }
 }
