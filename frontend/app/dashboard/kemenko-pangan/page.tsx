@@ -1,44 +1,14 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import Link from "next/link";
-import { HiBuildingOffice2, HiTruck, HiChartBarSquare } from "react-icons/hi2";
-
 import api from "@/app/lib/axios";
+import { buildLastNMonths } from "@/app/lib/dashboardUtils";
+
+// Import Komponen Terpisah
+import KemenkoHero from "@/app/components/dashboard/kemenko/KemenkoHero";
+import NavCardsSection from "@/app/components/dashboard/kemenko/NavCardsSection";
+import StatCardsSection from "@/app/components/dashboard/kemenko/StatCardsSection";
 import DashboardCharts from "@/app/components/dashboard/kemenko/DashboardCharts";
-
-// Nama bulan singkat, dipakai untuk label sumbu X di kedua chart
-const NAMA_BULAN = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "Mei",
-  "Jun",
-  "Jul",
-  "Agu",
-  "Sep",
-  "Okt",
-  "Nov",
-  "Des",
-];
-
-// Bangun array 6 bulan terakhir (termasuk bulan berjalan), urut dari yang paling lama
-function buildLastNMonths(n: number) {
-  const now = new Date();
-  const months: { key: string; label: string; year: number; month: number }[] =
-    [];
-  for (let i = n - 1; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    months.push({
-      key: `${d.getFullYear()}-${d.getMonth()}`,
-      label: NAMA_BULAN[d.getMonth()],
-      year: d.getFullYear(),
-      month: d.getMonth(),
-    });
-  }
-  return months;
-}
 
 export default function KemenkoPanganDashboard() {
   const today = new Date().toLocaleDateString("id-ID", {
@@ -47,6 +17,9 @@ export default function KemenkoPanganDashboard() {
     month: "long",
     year: "numeric",
   });
+
+  const [userName, setUserName] = useState("Dr. Hendra Wijaya");
+  const [loading, setLoading] = useState(true);
 
   const [stats, setStats] = useState({
     koperasiAktif: 0,
@@ -73,8 +46,20 @@ export default function KemenkoPanganDashboard() {
     }>
   >([]);
 
-  const [loading, setLoading] = useState(true);
+  // Ambil nama user dari localStorage/auth jika ada
+  useEffect(() => {
+    try {
+      const userStr = localStorage.getItem("user");
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        if (user?.name) setUserName(user.name);
+      }
+    } catch (e) {
+      console.error("Gagal mengambil nama user:", e);
+    }
+  }, []);
 
+  // Fetch Data Statistik & Chart
   useEffect(() => {
     const fetchDashboardStats = async () => {
       try {
@@ -100,7 +85,7 @@ export default function KemenkoPanganDashboard() {
           ? procurementData
           : procurementData?.data || [];
 
-        // ----- Kartu statistik (sama seperti sebelumnya) -----
+        // ----- Kartu statistik -----
         const countWaitingValidation = procurementList.filter(
           (item) =>
             item.status_verifikasi === "PENDING_DINAS" ||
@@ -118,7 +103,7 @@ export default function KemenkoPanganDashboard() {
           pengadaanDisetujui: countApproved,
         });
 
-        // ----- Donut: persentase status pengadaan nasional -----
+        // ----- Donut -----
         const countRejected = procurementList.filter(
           (item) =>
             item.status_verifikasi === "REJECTED_DINAS" ||
@@ -132,10 +117,9 @@ export default function KemenkoPanganDashboard() {
           total: countApproved + countWaitingValidation + countRejected,
         });
 
-        // ----- Bar: registrasi koperasi per bulan (6 bulan terakhir) -----
-        // Asumsi: setiap koperasi di activeList punya field created_at (tanggal aktif/registrasi)
+        // ----- Bar -----
         const months6 = buildLastNMonths(6);
-        const barData = months6.map(({ key, label, year, month }) => {
+        const barData = months6.map(({ label, year, month }) => {
           const jumlah = activeList.filter((item: any) => {
             if (!item.created_at) return false;
             const d = new Date(item.created_at);
@@ -145,8 +129,7 @@ export default function KemenkoPanganDashboard() {
         });
         setBarRegistrasi(barData);
 
-        // ----- Line: tren status pengadaan per bulan (6 bulan terakhir) -----
-        // Asumsi: setiap item procurementList punya field created_at (tanggal pengajuan)
+        // ----- Line -----
         const lineData = months6.map(({ label, year, month }) => {
           const itemsBulanIni = procurementList.filter((item) => {
             if (!item.created_at) return false;
@@ -184,83 +167,13 @@ export default function KemenkoPanganDashboard() {
   return (
     <div className="w-full font-sans text-slate-800">
       {/* HERO BANNER */}
-      <div className="relative rounded-2xl overflow-hidden mb-6 h-64">
-        <img
-          src="/kemenko-hero.png"
-          alt="Petani"
-          className="absolute inset-0 w-full h-full object-cover"
-        />
-        <div className="absolute inset-0 bg-linear-to-r from-green-900 from-10% via-green-900/60 via-30% to-transparent to-60%"></div>
-        <div className="relative z-10 p-8 h-full flex flex-col justify-center max-w-lg">
-          <h1 className="text-4xl font-bold text-white mb-2">
-            Dashboard Kemenko
-          </h1>
-          <p className="text-base text-white">
-            Pantau registrasi koperasi dan validasi pengadaan pupuk secara
-            real-time.
-          </p>
-          <span className="text-sm text-emerald-100/80">{today}</span>
-        </div>
-      </div>
+      <KemenkoHero userName={userName} today={today} />
 
       {/* 3 CARD NAVIGASI */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <NavCard
-          icon={<HiBuildingOffice2 />}
-          title="Manajemen Koperasi"
-          ctaText="Kelola Manajemen"
-          href="/dashboard/kemenko-pangan/manajemen-koperasi"
-        />
-        <NavCard
-          icon={<HiTruck />}
-          title="Validasi Pengadaan Pupuk"
-          ctaText="Kelola Pupuk"
-          href="/dashboard/kemenko-pangan/validasi-pengadaan"
-        />
-        <NavCard
-          icon={<HiChartBarSquare />}
-          title="Laporan"
-          ctaText="Kelola Laporan"
-          href="/dashboard/kemenko-pangan/laporan"
-        />
-      </div>
+      <NavCardsSection />
 
       {/* 4 KARTU STATISTIK */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 ">
-        <StatCard
-          label="Koperasi Aktif"
-          sub="Koperasi"
-          value={stats.koperasiAktif}
-          delta="Real-time data"
-          icon={<HiBuildingOffice2 />}
-          loading={loading}
-        />
-        <StatCard
-          label="Menunggu Registrasi"
-          sub="Registrasi"
-          value={stats.menungguRegistrasi}
-          delta="Real-time data"
-          icon={<HiBuildingOffice2 />}
-          loading={loading}
-        />
-        <StatCard
-          label="Menunggu Validasi"
-          sub="Validasi PO"
-          value={stats.menungguValidasi}
-          delta="Real-time data"
-          icon={<HiTruck />}
-          loading={loading}
-        />
-        <StatCard
-          label="Pengadaan Disetujui"
-          sub="Pengajuan PO"
-          value={stats.pengadaanDisetujui}
-          delta="Real-time data"
-          icon={<HiChartBarSquare />}
-          highlighted
-          loading={loading}
-        />
-      </div>
+      <StatCardsSection stats={stats} loading={loading} />
 
       {/* GRAFIK */}
       {loading ? (
@@ -275,83 +188,6 @@ export default function KemenkoPanganDashboard() {
           lineTrenPengadaan={lineTrenPengadaan}
         />
       )}
-    </div>
-  );
-}
-
-// Sub-komponen NavCard
-function NavCard({
-  icon,
-  title,
-  ctaText,
-  href,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  ctaText: string;
-  href: string;
-}) {
-  return (
-    <div className="bg-emerald-50/60 rounded-2xl p-5 flex items-center gap-4">
-      <div className="h-18 w-18 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-5xl shrink-0">
-        {icon}
-      </div>
-      <div>
-        <h3 className="text-xl font-bold text-slate-800 mb-1">{title}</h3>
-        <Link
-          href={href}
-          className="text-sm font-bold text-emerald-600 hover:text-emerald-700 inline-flex items-center gap-1"
-        >
-          {ctaText} <span>&rarr;</span>
-        </Link>
-      </div>
-    </div>
-  );
-}
-
-// Sub-komponen StatCard
-function StatCard({
-  label,
-  sub,
-  value,
-  delta,
-  icon,
-  highlighted = false,
-  loading = false,
-}: {
-  label: string;
-  sub: string;
-  value: number;
-  delta: string;
-  icon: React.ReactNode;
-  highlighted?: boolean;
-  loading?: boolean;
-}) {
-  return (
-    <div
-      className={`bg-white rounded-2xl p-5 border shadow-sm flex items-start gap-4 ${
-        highlighted
-          ? "border-emerald-300 ring-1 ring-emerald-200"
-          : "border-slate-200/60"
-      }`}
-    >
-      <div className="h-12 w-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-2xl shrink-0">
-        {icon}
-      </div>
-      <div>
-        <p className="text-base font-semibold text-slate-500 mb-1">{label}</p>
-        <div className="flex items-baseline gap-2 mt-0.5">
-          {loading ? (
-            <div className="h-8 w-16 bg-slate-200 animate-pulse rounded my-1"></div>
-          ) : (
-            <h3 className="text-3xl font-black text-slate-900">{value}</h3>
-          )}
-          <span className="text-sm font-medium text-slate-400">{sub}</span>
-        </div>
-        <p className="text-xs text-emerald-600 font-medium mt-1.5">
-          &uarr; {delta}
-        </p>
-      </div>
     </div>
   );
 }

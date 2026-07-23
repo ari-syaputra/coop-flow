@@ -77,7 +77,7 @@ export default function AiProcurementPanel({ aiData }: AiProcurementPanelProps) 
   };
 
   return (
-    <div className="space-y-4 flex-shrink-0 animate-fadeIn">
+    <div className="space-y-4 shrink-0 animate-fadeIn">
       {/* 1. KARTU UTAMA SUMMARY AI */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 bg-white border border-zinc-200 rounded-xl p-5 shadow-sm">
         
@@ -91,7 +91,7 @@ export default function AiProcurementPanel({ aiData }: AiProcurementPanelProps) 
               </span>
             </div>
             <p className="text-sm font-bold flex items-center gap-2 text-zinc-800">
-              <FaCalendarAlt className="flex-shrink-0 text-green-600" />
+              <FaCalendarAlt className="shrink-0 text-green-600" />
               {aiOverview.periode_pengadaan || "-"}
             </p>
           </div>
@@ -208,7 +208,7 @@ export default function AiProcurementPanel({ aiData }: AiProcurementPanelProps) 
                     <td className={`px-4 py-3.5 text-center font-semibold ${isZero ? "text-zinc-400" : "text-zinc-800"}`}>{item.suggested_procurement_bags} Sak</td>
                     <td className="px-4 py-3.5 pl-6">
                       <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium ${isZero ? "bg-zinc-100 text-zinc-600 border border-zinc-200" : meta?.keterangan_sistem?.includes("Disesuaikan") ? "bg-amber-50 text-amber-700 border border-amber-200" : "bg-blue-50 text-blue-700 border border-blue-200"}`}>
-                        <FaInfoCircle className="text-[10px] flex-shrink-0" />
+                        <FaInfoCircle className="text-[10px] shrink-0" />
                         {meta?.keterangan_sistem || "Dihitung otomatis"}
                       </div>
                     </td>

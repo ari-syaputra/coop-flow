@@ -105,17 +105,24 @@ class DinasDashboardController extends Controller
                 ];
             });
 
-        // 3. Presentase Status Pengajuan (Donut Chart) — hanya PO milik koperasi di wilayah ini
-        $statusPengajuan = ProcurementOrder::select('status_verifikasi', DB::raw('count(*) as total'))
+        // 3. Presentase Status Pengajuan (Donut Chart)
+        $statusRaw = ProcurementOrder::select('status_verifikasi', DB::raw('count(*) as total'))
             ->whereHas('cooperative', $scopeCooperative)
             ->groupBy('status_verifikasi')
-            ->get()
-            ->pluck('total', 'status_verifikasi')
-            ->toArray();
+            ->get();
 
-        $disetujui = $statusPengajuan['disetujui'] ?? 0;
-        $menunggu = $statusPengajuan['PENDING_DINAS'] ?? 0;
-        $ditolak = $statusPengajuan['ditolak'] ?? 0;
+        // Ubah key menjadi lowercase semua agar pencarian aman
+        $statusPengajuan = [];
+        foreach ($statusRaw as $item) {
+            $key = strtolower(trim($item->status_verifikasi));
+            $statusPengajuan[$key] = $item->total;
+        }
+
+        // Cocokkan status dengan fleksibel (menangani berbagai variasi penulisan status di DB)
+        $disetujui = ($statusPengajuan['disetujui'] ?? 0) + ($statusPengajuan['approved'] ?? 0);
+        $menunggu  = ($statusPengajuan['pending_dinas'] ?? 0) + ($statusPengajuan['pending'] ?? 0);
+        $ditolak   = ($statusPengajuan['ditolak'] ?? 0) + ($statusPengajuan['rejected'] ?? 0);
+
         $totalPencatatan = array_sum($statusPengajuan);
         $lainnya = $totalPencatatan - ($disetujui + $menunggu + $ditolak);
 
@@ -173,9 +180,9 @@ class DinasDashboardController extends Controller
 
             $trenPengajuan[] = [
                 'month' => $monthName,
-                'disetujui' => $groupedCounts[$key]['disetujui'] ?? 0,
+                'disetujui' => $groupedCounts[$key]['APPROVED'] ?? 0,
                 'menunggu_validasi' => $groupedCounts[$key]['PENDING_DINAS'] ?? 0,
-                'ditolak' => $groupedCounts[$key]['ditolak'] ?? 0,
+                'ditolak' => $groupedCounts[$key]['REJECTED'] ?? 0,
             ];
         }
 
@@ -231,6 +238,9 @@ class DinasDashboardController extends Controller
 
         return response()->json([
             'success' => true,
+            'user' => [
+                'name' => $user->name ?? 'Admin Dinas',
+            ],
             'badges' => [
                 'validasi_pengadaan_count' => $validasiPengadaanCount,
             ],

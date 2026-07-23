@@ -5,11 +5,9 @@ import GreetingBanner from "./GreetingBanner";
 import MetricCardsSection from "./MetricCardsSection";
 import AiPredictionsSection from "./AiPredictionsSection";
 import WarehouseStockSection from "./WarehouseStockSection";
-// 1. Mengubah import komponen dari ChartAndMapSection menjadi ChartSection
-// Catatan: Jika Anda juga mengubah nama filenya menjadi ChartSection.tsx, ubah path-nya menjadi "./ChartSection"
+
 import ChartSection from "../admin-koperasi/ChartAndMapSection";
 
-// 2. Import komponen Peta Lahan Terbaru dari Admin Lapangan
 import LatestMap from "../../../components/dashboard/LatestMap";
 
 interface OverviewContentProps {
