@@ -190,10 +190,14 @@ export default function RegisterForm() {
 
     setLoading(true);
 
-    const [provinces, setProvinces] = useState<any[]>([]);
-    const [cities, setCities] = useState<any[]>([]);
-    const [districts, setDistricts] = useState<any[]>([]);
-    const [villages, setVillages] = useState<any[]>([]);
+    const provinceName =
+      provinces.find((p: any) => p.code === formData.province_id)?.name || "";
+    const cityName =
+      cities.find((c: any) => c.code === formData.city_id)?.name || "";
+    const districtName =
+      districts.find((d: any) => d.code === formData.district_id)?.name || "";
+    const villageName =
+      villages.find((v: any) => v.code === formData.village_id)?.name || "";
 
     // 🔥 STRATEGI BARU: Menggunakan FormData untuk kebutuhan Upload File Biner
     const formDataPayload = new FormData();
