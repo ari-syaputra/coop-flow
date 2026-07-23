@@ -7,60 +7,104 @@ use App\Models\Transaction;
 use App\Models\TransactionItem;
 use App\Models\Farmer;
 use App\Models\Fertilizer;
+use App\Models\Cooperative;
+use App\Models\InventoryMutation;
+use Illuminate\Support\Facades\Schema;
 use Carbon\Carbon;
 
 class TransactionSeeder extends Seeder
 {
     public function run(): void
     {
-        $cooperativeId = 1;
+        // 1. Bersihkan tabel transaksi terlebih dahulu (mencegah duplikasi)
+        Schema::disableForeignKeyConstraints();
+        TransactionItem::truncate();
+        Transaction::truncate();
+        Schema::enableForeignKeyConstraints();
 
-        // Ambil SEMUA petani (bukan cuma 1) dan pupuk milik koperasi 1
-        $farmers = Farmer::whereHas('user', function ($q) use ($cooperativeId) {
-            $q->where('cooperative_id', $cooperativeId);
+        // 2. Ambil Koperasi Default (Godean) dari database
+        $coopDefault = Cooperative::where('cooperative_code', 'KOP-DEFAULT-001')->first() 
+            ?? Cooperative::first();
+
+        if (!$coopDefault) {
+            $this->command->error('Data Koperasi tidak ditemukan. Jalankan CooperativeSeeder terlebih dahulu!');
+            return;
+        }
+
+        // 3. Distribusi Utama untuk Koperasi Default (Godean) - Jan - Jul
+        $defaultMonthlyDistributions = [
+            6 => 1200, // Jan
+            5 => 2500, // Feb
+            4 => 1800, // Mar
+            3 => 3100, // Apr
+            2 => 2200, // Mei
+            1 => 4000, // Jun
+            0 => 1500, // Jul (Bulan ini)
+        ];
+
+        $this->seedTransactionsForCooperative($coopDefault, $defaultMonthlyDistributions);
+
+        // 4. Generate Distribusi untuk Koperasi Wilayah Lainnya (Depok, Tempel, dll)
+        $otherCoops = Cooperative::where('id', '!=', $coopDefault->id)->get();
+
+        foreach ($otherCoops as $coop) {
+            $randomDistributions = [
+                6 => rand(800, 1500),
+                5 => rand(1500, 3000),
+                4 => rand(1000, 2200),
+                3 => rand(2000, 3500),
+                2 => rand(1500, 2800),
+                1 => rand(2500, 4200),
+                0 => rand(1000, 2000),
+            ];
+
+            $this->seedTransactionsForCooperative($coop, $randomDistributions);
+        }
+    }
+
+    /**
+     * Helper function untuk memproses transaksi dan mutasi stok keluar per koperasi.
+     */
+    private function seedTransactionsForCooperative(Cooperative $cooperative, array $monthlyDistributions): void
+    {
+        // Ambil Petani yang terikat dengan Koperasi ini
+        $farmers = Farmer::whereHas('user', function ($q) use ($cooperative) {
+            $q->where('cooperative_id', $cooperative->id);
         })->get();
 
-        $fertilizers = Fertilizer::where('cooperative_id', $cooperativeId)->get();
+        // Fallback jika petani belum terikat spesifik
+        if ($farmers->isEmpty()) {
+            $farmers = Farmer::all();
+        }
+
+        $fertilizers = Fertilizer::where('cooperative_id', $cooperative->id)->get();
 
         if ($farmers->isEmpty() || $fertilizers->isEmpty()) {
             return;
         }
 
-        // Variasi total distribusi (kg) per bulan (Jan - Jul 2026)
-        $monthlyDistributions = [
-            6 => 1200, // Jan 2026
-            5 => 2500, // Feb 2026
-            4 => 1800, // Mar 2026
-            3 => 3100, // Apr 2026
-            2 => 2200, // Mei 2026
-            1 => 4000, // Jun 2026
-            0 => 1500, // Jul 2026 (Bulan ini)
-        ];
-
         foreach ($monthlyDistributions as $monthsAgo => $totalKg) {
             $baseDate = Carbon::now()->subMonths($monthsAgo)->startOfMonth();
             
-            // Kita pecah total volume bulan ini ke 3 sampai 6 transaksi berbeda
             $numberOfTransactions = rand(3, 6);
             $kgPerTransaction = $totalKg / $numberOfTransactions;
 
             for ($i = 0; $i < $numberOfTransactions; $i++) {
-                // Pilih entitas acak untuk setiap transaksi
                 $farmer = $farmers->random(); 
                 $selectedFertilizer = $fertilizers->random(); 
 
-                // Variasikan jumlah Kg agar angkanya tidak bulat sempurna (+/- 20%)
-                $actualKg = round($kgPerTransaction * (rand(80, 120) / 100));
+                // Variasikan jumlah Kg agar angkanya alami (+/- 20%)
+                $actualKg = max(10, round($kgPerTransaction * (rand(80, 120) / 100)));
                 
-                // Kalkulasi harga (Asumsi Rp 2.500/kg)
-                $pricePerKg = 2500;
+                // Gunakan harga asli dari tabel fertilizers
+                $pricePerKg = $selectedFertilizer->price_per_kg ?? 2500;
                 $subtotal = $actualKg * $pricePerKg;
 
-                // Acak hari di bulan tersebut agar titik grafiknya natural
+                // Acak hari di bulan tersebut
                 $transactionDate = (clone $baseDate)->addDays(rand(1, 28));
                 $dateString = $transactionDate->format('ymd');
 
-                // 1. Buat Transaksi Header
+                // 1. Buat Header Transaksi
                 $transaction = Transaction::create([
                     'transaction_code' => 'GAF-' . $dateString . '-' . rand(1000, 9999),
                     'invoice_number'   => 'INV-' . $dateString . '-' . rand(1000, 9999),
@@ -82,6 +126,16 @@ class TransactionSeeder extends Seeder
                     'subtotal'            => $subtotal,
                     'created_at'          => $transactionDate,
                     'updated_at'          => $transactionDate,
+                ]);
+
+                // 3. Catat Mutasi Stok Keluar (Inventory Mutation Audit Log)
+                InventoryMutation::create([
+                    'fertilizer_id' => $selectedFertilizer->id,
+                    'type'          => 'keluar',
+                    'quantity_kg'   => $actualKg,
+                    'description'   => 'Penebusan pupuk subsidi oleh petani (' . ($farmer->full_name ?? 'Petani') . ')',
+                    'created_at'    => $transactionDate,
+                    'updated_at'    => $transactionDate,
                 ]);
             }
         }

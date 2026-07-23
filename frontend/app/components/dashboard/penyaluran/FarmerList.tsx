@@ -2,7 +2,13 @@
 
 import { useState, useMemo } from "react";
 import { Farmer } from "@/app/types/farmer";
-import { FaSearch, FaFilter, FaChevronDown, FaSortAmountDown, FaUser } from "react-icons/fa";
+import {
+  FaSearch,
+  FaFilter,
+  FaChevronDown,
+  FaSortAmountDown,
+  FaUser,
+} from "react-icons/fa";
 
 interface FarmerListProps {
   farmers: Farmer[];
@@ -10,7 +16,11 @@ interface FarmerListProps {
   onSelectFarmer: (farmer: Farmer) => void;
 }
 
-export default function FarmerList({ farmers, selectedId, onSelectFarmer }: FarmerListProps) {
+export default function FarmerList({
+  farmers,
+  selectedId,
+  onSelectFarmer,
+}: FarmerListProps) {
   const [isFilterOpen, setIsFilterOpen] = useState<boolean>(true);
 
   // State Kontrol Filter & Search
@@ -21,25 +31,22 @@ export default function FarmerList({ farmers, selectedId, onSelectFarmer }: Farm
   const [dariTanggal, setDariTanggal] = useState("");
   const [sampaiTanggal, setSampaiTanggal] = useState("");
 
-// 1. Ekstrak Opsi Dropdown secara Dinamis & Type-Safe dari Data Backend
+  // 1. Ekstrak Opsi Dropdown secara Dinamis & Type-Safe dari Data Backend
   const filterOptions = useMemo(() => {
     const tanamanSet = new Set<string>();
     const wilayahSet = new Set<string>();
     const kelompokSet = new Set<string>();
 
     farmers.forEach((f) => {
-      // Kelompok Tani aman karena object selalu ada
       if (f.farmer_group?.name) {
         kelompokSet.add(f.farmer_group.name);
       }
-      
-      // Ambil wilayah dari alamat user jika tidak null
+
       if (f.user?.address) {
         const parts = f.user.address.split(",");
         if (parts[0]) wilayahSet.add(parts[0].trim());
       }
-      
-      // Loop ke dalam array lands -> plants (Sesuai interface Land)
+
       f.lands?.forEach((l) => {
         l.plants?.forEach((p) => {
           if (p.name) tanamanSet.add(p.name);
@@ -54,35 +61,33 @@ export default function FarmerList({ farmers, selectedId, onSelectFarmer }: Farm
     };
   }, [farmers]);
 
-  // 2. Proses Filtering & Searching Data Secara Kombinatif (Type-Safe)
+  // 2. Proses Filtering & Searching Data Secara Kombinatif
   const filteredFarmers = useMemo(() => {
     return farmers.filter((farmer) => {
-      // Filter Search Bar (Nama atau NIK)
       const matchesSearch =
         search === "" ||
         farmer.user.name.toLowerCase().includes(search.toLowerCase()) ||
         farmer.nik.includes(search);
 
-      // Filter Kelompok Tani
       const matchesKelompok =
         kelompokTani === "Semua Kelompok Tani" ||
         farmer.farmer_group?.name === kelompokTani;
 
-      // Filter Wilayah (Proteksi jika address bernilai null)
       const matchesWilayah =
         wilayah === "Semua Wilayah" ||
         (farmer.user?.address
           ? farmer.user.address.toLowerCase().includes(wilayah.toLowerCase())
           : false);
 
-      // Filter Jenis Tanaman (Mencari di dalam array plants milik tiap land)
       const matchesTanaman =
         jenisTanaman === "Semua jenis" ||
         farmer.lands?.some((l) =>
-          l.plants?.some((p) => p.name === jenisTanaman)
+          l.plants?.some((p) => p.name === jenisTanaman),
         );
 
-      return matchesSearch && matchesKelompok && matchesWilayah && matchesTanaman;
+      return (
+        matchesSearch && matchesKelompok && matchesWilayah && matchesTanaman
+      );
     });
   }, [farmers, search, jenisTanaman, wilayah, kelompokTani]);
 
@@ -112,7 +117,7 @@ export default function FarmerList({ farmers, selectedId, onSelectFarmer }: Farm
               className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 bg-white"
             />
           </div>
-          
+
           <button
             type="button"
             onClick={() => setIsFilterOpen(!isFilterOpen)}
@@ -120,7 +125,9 @@ export default function FarmerList({ farmers, selectedId, onSelectFarmer }: Farm
           >
             <FaFilter className="text-xs" />
             <span>Filter</span>
-            <FaChevronDown className={`text-[10px] transition-transform duration-200 ${isFilterOpen ? "rotate-180" : ""}`} />
+            <FaChevronDown
+              className={`text-[10px] transition-transform duration-200 ${isFilterOpen ? "rotate-180" : ""}`}
+            />
           </button>
         </div>
 
@@ -130,7 +137,9 @@ export default function FarmerList({ farmers, selectedId, onSelectFarmer }: Farm
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {/* Dropdown Jenis Tanaman */}
               <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-medium text-gray-400">Jenis Tanaman</label>
+                <label className="text-[11px] font-medium text-gray-400">
+                  Jenis Tanaman
+                </label>
                 <select
                   value={jenisTanaman}
                   onChange={(e) => setJenisTanaman(e.target.value)}
@@ -138,14 +147,18 @@ export default function FarmerList({ farmers, selectedId, onSelectFarmer }: Farm
                 >
                   <option>Semua jenis</option>
                   {filterOptions.tanaman.map((t) => (
-                    <option key={t} value={t}>{t}</option>
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
                   ))}
                 </select>
               </div>
 
               {/* Dropdown Wilayah */}
               <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-medium text-gray-400">Wilayah</label>
+                <label className="text-[11px] font-medium text-gray-400">
+                  Wilayah
+                </label>
                 <select
                   value={wilayah}
                   onChange={(e) => setWilayah(e.target.value)}
@@ -153,14 +166,18 @@ export default function FarmerList({ farmers, selectedId, onSelectFarmer }: Farm
                 >
                   <option>Semua Wilayah</option>
                   {filterOptions.wilayah.map((w) => (
-                    <option key={w} value={w}>{w}</option>
+                    <option key={w} value={w}>
+                      {w}
+                    </option>
                   ))}
                 </select>
               </div>
 
               {/* Dropdown Kelompok Tani */}
               <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-medium text-gray-400">Kelompok Tani</label>
+                <label className="text-[11px] font-medium text-gray-400">
+                  Kelompok Tani
+                </label>
                 <select
                   value={kelompokTani}
                   onChange={(e) => setKelompokTani(e.target.value)}
@@ -168,40 +185,43 @@ export default function FarmerList({ farmers, selectedId, onSelectFarmer }: Farm
                 >
                   <option>Semua Kelompok Tani</option>
                   {filterOptions.kelompok.map((k) => (
-                    <option key={k} value={k}>{k}</option>
+                    <option key={k} value={k}>
+                      {k}
+                    </option>
                   ))}
                 </select>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">         
-            <div className="flex justify-end gap-2 sm:col-start-2">
-              <button
-                type="button"
-                onClick={handleReset}
-                className="px-4 py-1.5 border border-gray-300 rounded-lg text-xs font-semibold text-gray-700 hover:bg-gray-50 transition"
-              >
-                Reset
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsFilterOpen(false)}
-                className="px-4 py-1.5 bg-[#1B5E3A] text-white rounded-lg text-xs font-semibold hover:bg-emerald-900 transition"
-              >
-                Terapkan
-              </button>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+              <div className="flex justify-end gap-2 sm:col-start-2">
+                <button
+                  type="button"
+                  onClick={handleReset}
+                  className="px-4 py-1.5 border border-gray-300 rounded-lg text-xs font-semibold text-gray-700 hover:bg-gray-50 transition"
+                >
+                  Reset
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsFilterOpen(false)}
+                  className="px-4 py-1.5 bg-[#1B5E3A] text-white rounded-lg text-xs font-semibold hover:bg-emerald-900 transition"
+                >
+                  Terapkan
+                </button>
+              </div>
             </div>
-          </div>
           </div>
         )}
       </div>
 
-      <div className="bg-white rounded-lg border border-gray-100 p-4 shadow-sm mt-4 flex flex-col flex-1 overflow-hidden min-h-[300px]">
-        
+      <div className="bg-white rounded-lg border border-gray-100 p-4 shadow-sm mt-4 flex flex-col flex-1 overflow-hidden min-h-75">
         <div className="flex justify-between items-center text-xs text-gray-400 font-medium px-1 mb-3 shrink-0">
           <span>Total {filteredFarmers.length} data ditemukan</span>
           <div className="flex items-center gap-1.5 cursor-pointer hover:text-gray-600">
-            <span>Urutkan : <strong className="text-gray-700">Terbaru</strong></span>
+            <span>
+              Urutkan : <strong className="text-gray-700">Terbaru</strong>
+            </span>
             <FaSortAmountDown className="text-gray-500" />
           </div>
         </div>
@@ -213,27 +233,51 @@ export default function FarmerList({ farmers, selectedId, onSelectFarmer }: Farm
             </div>
           ) : (
             filteredFarmers.map((farmer) => {
-              const isSelected = farmer.id === selectedId;
+              // 🔴 Tipe data ID diperbandingkan dengan aman
+              const isSelected = String(farmer.id) === String(selectedId);
+
               return (
                 <div
                   key={farmer.id}
                   onClick={() => onSelectFarmer(farmer)}
-                  className={`flex items-center gap-4 p-2 border rounded-lg cursor-pointer transition ${
-                    isSelected 
-                      ? "border-emerald-500 bg-emerald-50/20 shadow-sm" 
-                      : "border-gray-150 bg-white hover:bg-gray-50"
+                  className={`flex items-center gap-4 p-3 rounded-lg cursor-pointer transition-all duration-200 ${
+                    isSelected
+                      ? "border-2 border-emerald-500 bg-emerald-50/80 shadow-sm ring-1 ring-emerald-500/20"
+                      : "border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300"
                   }`}
                 >
-                  <div className="w-12 h-12 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-400 text-lg flex-shrink-0">
+                  {/* Avatar Icon dengan Highlight */}
+                  <div
+                    className={`w-11 h-11 rounded-full flex items-center justify-center text-lg shrink-0 transition-colors ${
+                      isSelected
+                        ? "bg-emerald-100 text-emerald-700 border border-emerald-300"
+                        : "bg-gray-100 border border-gray-200 text-gray-400"
+                    }`}
+                  >
                     <FaUser />
                   </div>
-                  
+
+                  {/* Detail Teks Petani */}
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold text-sm text-gray-800 truncate">
+                    <h4
+                      className={`font-semibold text-sm truncate ${
+                        isSelected
+                          ? "text-emerald-950 font-bold"
+                          : "text-gray-800"
+                      }`}
+                    >
                       {farmer.user.name}
                     </h4>
-                    <p className="text-xs text-gray-400 mt-0.5">NIK: {farmer.nik}</p>
-                    <p className="text-xs text-gray-400 truncate">Kelompok Tani: {farmer.farmer_group?.name || "-"}</p>
+                    <p
+                      className={`text-xs mt-0.5 ${isSelected ? "text-emerald-700 font-medium" : "text-gray-400"}`}
+                    >
+                      NIK: {farmer.nik}
+                    </p>
+                    <p
+                      className={`text-xs truncate ${isSelected ? "text-emerald-700/80" : "text-gray-400"}`}
+                    >
+                      Kelompok Tani: {farmer.farmer_group?.name || "-"}
+                    </p>
                   </div>
                 </div>
               );

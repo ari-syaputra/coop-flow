@@ -17,6 +17,8 @@ export const metadata: Metadata = {
   title: "COOP-FLOW",
   description: "Sistem Manajemen Lapangan Koperasi COOP-FLOW",
   manifest: "/manifest.json",
+  
+
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",

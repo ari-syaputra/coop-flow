@@ -1,31 +1,61 @@
 "use client";
+
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Upload, FolderOpen } from "lucide-react";
+import axios from "axios"; // 🟢 Import axios untuk type-guarding error
 import api from "../../../lib/axios";
 import Swal from "sweetalert2";
 
+// 🟢 1. Definisi Tipe Data (Interface) untuk Wilayah
+interface Region {
+  code: string;
+  name: string;
+}
+
+// 🟢 2. Definisi Tipe Data Form Data
+interface RegisterFormData {
+  cooperative_name: string;
+  nib_cooperative: string;
+  legal_approval_number: string;
+  established_date: string;
+  npwp: string;
+  address_cooperative: string;
+  postal_code: string;
+  province_id: string;
+  city_id: string;
+  district_id: string;
+  village_id: string;
+  email_cooperative: string;
+  phone_cooperative: string;
+  capacity_ton: string;
+  password: string;
+  password_confirmation: string;
+}
+
 export default function RegisterForm() {
   const router = useRouter();
-  const fileInputRef = useRef<HTMLInputElement>(null); // Ref untuk mereset input file secara fisik
-  const [loading, setLoading] = useState(false);
-  const [provinces, setProvinces] = useState([]);
-  const [cities, setCities] = useState([]);
-  const [districts, setDistricts] = useState([]);
-  const [villages, setVillages] = useState([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState<boolean>(false);
+
+  // 🟢 3. Menghindari tipe implicit 'never[]' pada useState
+  const [provinces, setProvinces] = useState<Region[]>([]);
+  const [cities, setCities] = useState<Region[]>([]);
+  const [districts, setDistricts] = useState<Region[]>([]);
+  const [villages, setVillages] = useState<Region[]>([]);
+
+  const [showPassword, setShowPassword] = useState<boolean>(false);
   const [showPasswordConfirmation, setShowPasswordConfirmation] =
-    useState(false);
+    useState<boolean>(false);
 
-  // State khusus untuk menampung file biner berkas perizinan
   const [legalFile, setLegalFile] = useState<File | null>(null);
-  const [isDragging, setIsDragging] = useState(false); // 🆕 State untuk efek drag & drop
+  const [isDragging, setIsDragging] = useState<boolean>(false);
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<RegisterFormData>({
     cooperative_name: "",
-    nib_cooperative: "", // 🆕 Menggantikan nik_cooperative
-    legal_approval_number: "", // 🆕 Menggantikan legal_entity_number
+    nib_cooperative: "",
+    legal_approval_number: "",
     established_date: "",
     npwp: "",
     address_cooperative: "",
@@ -55,7 +85,7 @@ export default function RegisterForm() {
 
   useEffect(() => {
     api
-      .get("/regional/provinces")
+      .get<Region[]>("/regional/provinces")
       .then((res) => setProvinces(res.data))
       .catch((err) => console.error("Error Fetching Provinces:", err));
   }, []);
@@ -68,14 +98,12 @@ export default function RegisterForm() {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  // Handler khusus untuk mendeteksi perubahan input file
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setLegalFile(e.target.files[0]);
     }
   };
 
-  // 🆕 Handler untuk fitur drag & drop file
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragging(false);
@@ -83,7 +111,6 @@ export default function RegisterForm() {
       const file = e.dataTransfer.files[0];
       setLegalFile(file);
 
-      // Sinkronkan file yang di-drop ke input asli agar tetap konsisten
       if (fileInputRef.current) {
         const dataTransfer = new DataTransfer();
         dataTransfer.items.add(file);
@@ -115,7 +142,9 @@ export default function RegisterForm() {
       setDistricts([]);
       setVillages([]);
       if (code) {
-        const res = await api.get(`/regional/provinces/${code}/cities`);
+        const res = await api.get<Region[]>(
+          `/regional/provinces/${code}/cities`,
+        );
         setCities(res.data);
       }
     } else if (type === "city") {
@@ -128,14 +157,18 @@ export default function RegisterForm() {
       setDistricts([]);
       setVillages([]);
       if (code) {
-        const res = await api.get(`/regional/cities/${code}/districts`);
+        const res = await api.get<Region[]>(
+          `/regional/cities/${code}/districts`,
+        );
         setDistricts(res.data);
       }
     } else if (type === "district") {
       setFormData((prev) => ({ ...prev, district_id: code, village_id: "" }));
       setVillages([]);
       if (code) {
-        const res = await api.get(`/regional/districts/${code}/villages`);
+        const res = await api.get<Region[]>(
+          `/regional/districts/${code}/villages`,
+        );
         setVillages(res.data);
       }
     } else if (type === "village") {
@@ -143,7 +176,7 @@ export default function RegisterForm() {
     }
   };
 
-  const generateCooperativeCode = (name: string) => {
+  const generateCooperativeCode = (name: string): string => {
     const initials = name
       .trim()
       .split(/\s+/)
@@ -158,10 +191,9 @@ export default function RegisterForm() {
     return `KOP-${initials}-${timestamp}${random}`;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    // 1. Validasi Password
     if (formData.password !== formData.password_confirmation) {
       Toast.fire({
         icon: "warning",
@@ -170,7 +202,6 @@ export default function RegisterForm() {
       return;
     }
 
-    // 2. Validasi Panjang NIB (Wajib 13 Digit)
     if (formData.nib_cooperative.length !== 13) {
       Toast.fire({
         icon: "warning",
@@ -179,7 +210,6 @@ export default function RegisterForm() {
       return;
     }
 
-    // 3. Validasi Keberadaan Berkas Dokumen
     if (!legalFile) {
       Toast.fire({
         icon: "warning",
@@ -190,16 +220,16 @@ export default function RegisterForm() {
 
     setLoading(true);
 
+    // 🟢 4. Menggunakan tipe data Region murni (tanpa p: any)
     const provinceName =
-      provinces.find((p: any) => p.code === formData.province_id)?.name || "";
+      provinces.find((p) => p.code === formData.province_id)?.name || "";
     const cityName =
-      cities.find((c: any) => c.code === formData.city_id)?.name || "";
+      cities.find((c) => c.code === formData.city_id)?.name || "";
     const districtName =
-      districts.find((d: any) => d.code === formData.district_id)?.name || "";
+      districts.find((d) => d.code === formData.district_id)?.name || "";
     const villageName =
-      villages.find((v: any) => v.code === formData.village_id)?.name || "";
+      villages.find((v) => v.code === formData.village_id)?.name || "";
 
-    // 🔥 STRATEGI BARU: Menggunakan FormData untuk kebutuhan Upload File Biner
     const formDataPayload = new FormData();
 
     formDataPayload.append("cooperative_name", formData.cooperative_name);
@@ -225,24 +255,13 @@ export default function RegisterForm() {
     formDataPayload.append("capacity_ton", formData.capacity_ton);
     formDataPayload.append("password", formData.password);
 
-    // Append file biner ke dalam payload FormData
     formDataPayload.append("legal_approval_document", legalFile);
 
     try {
-      // ✅ PERBAIKAN 1: Hapus manual headers "Content-Type", biarkan Axios yang mengatur otomatis
-      // Ubah bagian ini:
-      const response = await api.post(
-        "/cooperative/register",
-        formDataPayload,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        },
-      );
+      const response = await api.post("/cooperative/register", formDataPayload);
 
       const successMessage =
-        response.data?.message || "Registrasi Koperasi sukses diajukan!";
+        response.data?.message || "Registrasi Koperasi sukses diajukan!, Tunggu sampai disetujui Kemenko";
 
       Toast.fire({
         icon: "success",
@@ -250,19 +269,21 @@ export default function RegisterForm() {
       });
 
       router.push("/auth/login");
-    } catch (err: any) {
-      console.error("Full response data:", err.response?.data);
-
+    } catch (err: unknown) {
+      // 🟢 5. Penanganan Error yang Type-Safe menggunakan Axios Error Guard
       let errorMsg = "Gagal registrasi, periksa kembali input data.";
 
-      // ✅ PERBAIKAN 2: Tangkap error 422 dari Laravel Validations
-      if (err.response && err.response.data) {
+      if (axios.isAxiosError(err) && err.response) {
+        console.error("Full response data:", err.response.data);
+
         if (err.response.status === 422) {
-          const errors = err.response.data;
+          const errors = err.response.data as Record<string, string[]>;
           const firstErrorKey = Object.keys(errors)[0];
-          errorMsg = errors[firstErrorKey][0]; // Ambil pesan error validasi pertama
-        } else if (err.response.data.message) {
-          errorMsg = err.response.data.message;
+          if (firstErrorKey && errors[firstErrorKey]) {
+            errorMsg = errors[firstErrorKey][0];
+          }
+        } else if (err.response.data?.message) {
+          errorMsg = err.response.data.message as string;
         }
       }
 
@@ -295,7 +316,7 @@ export default function RegisterForm() {
       password_confirmation: "",
     });
     setLegalFile(null);
-    if (fileInputRef.current) fileInputRef.current.value = ""; // Bersihkan tampilan input file secara fisik
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const inputClass =
@@ -327,7 +348,6 @@ export default function RegisterForm() {
             name="nib_cooperative"
             placeholder="Masukan 13 digit NIB Koperasi"
             value={formData.nib_cooperative}
-            // Memastikan user hanya bisa memasukkan angka dengan panjang max 13 digit
             onChange={(e) => {
               const val = e.target.value.replace(/\D/g, "").slice(0, 13);
               setFormData((prev) => ({ ...prev, nib_cooperative: val }));
@@ -345,7 +365,6 @@ export default function RegisterForm() {
             Upload Berkas / SK Pendirian <span className="text-red-500">*</span>
           </label>
 
-          {/* 🆕 Dropzone kustom menggantikan input file bawaan */}
           <div
             onDrop={handleDrop}
             onDragOver={handleDragOver}
@@ -494,7 +513,7 @@ export default function RegisterForm() {
             required
           >
             <option value="">Pilih Provinsi</option>
-            {provinces.map((p: any) => (
+            {provinces.map((p) => (
               <option key={p.code} value={p.code}>
                 {p.name}
               </option>
@@ -512,7 +531,7 @@ export default function RegisterForm() {
             required
           >
             <option value="">Pilih Kabupaten/Kota</option>
-            {cities.map((c: any) => (
+            {cities.map((c) => (
               <option key={c.code} value={c.code}>
                 {c.name}
               </option>
@@ -534,7 +553,7 @@ export default function RegisterForm() {
             required
           >
             <option value="">Pilih Kecamatan</option>
-            {districts.map((d: any) => (
+            {districts.map((d) => (
               <option key={d.code} value={d.code}>
                 {d.name}
               </option>
@@ -552,7 +571,7 @@ export default function RegisterForm() {
             required
           >
             <option value="">Pilih Desa/Kelurahan</option>
-            {villages.map((v: any) => (
+            {villages.map((v) => (
               <option key={v.code} value={v.code}>
                 {v.name}
               </option>
