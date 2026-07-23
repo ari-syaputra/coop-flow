@@ -16,7 +16,6 @@ class FarmerSeeder extends Seeder
 {
     public function run(): void
     {
-        // 0. Lokasi acuan (sama seperti Bapak Slamet - Sleman, DIY)
         $refProvinceId = '34';
         $refCityId = '3404';
         $refDistrictId = '340402';

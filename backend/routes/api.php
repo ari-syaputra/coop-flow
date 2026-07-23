@@ -125,7 +125,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/procurement/{id}/approve-quota', [ProcurementOrderController::class, 'approveByKemenko']); 
     Route::post('/procurement/{id}/dispatch-truck', [ProcurementOrderController::class, 'dispatchShipmentByKemenko']); 
 
-
     /*
     |--------------------------------------------------------------------------
     | Modul Otoritas Dinas Pertanian Kabupaten/Kota
@@ -137,12 +136,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/procurement/{id}/arrived-lini3', [ProcurementOrderController::class, 'updateToLiniTiga']); 
         Route::post('/procurement/{id}/release-lini4', [ProcurementOrderController::class, 'releaseToLiniEmpat']); 
     });
-
-    /*
-    |--------------------------------------------------------------------------
-    | Manajemen Lahan, Petani & Wilayah
-    |--------------------------------------------------------------------------
-    */
 
     // API Khusus Dashboard Petani (Mobile UI)
     Route::get('/farmer/dashboard-summary', [FarmerController::class, 'getDashboardSummary']);

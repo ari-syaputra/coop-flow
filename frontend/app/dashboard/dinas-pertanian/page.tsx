@@ -46,11 +46,18 @@ export default function DinasDashboardPage() {
 
   return (
     <div className="space-y-8 pb-8">
-      <WelcomeBanner />
+      <WelcomeBanner adminName={data?.user?.name} />
       <ActionCards validasiCount={data?.badges.validasi_pengadaan_count || 0} />
       <StatsGrid metrics={data?.metrics} />
-      <DashboardCharts donut={data?.donut_chart} line={data?.line_chart_tren} bar={data?.bar_chart_kecamatan} />
-      <RecentLists orders={data?.pengajuan_menunggu} activities={data?.aktivitas_terbaru} />
+      <DashboardCharts
+        donut={data?.donut_chart}
+        line={data?.line_chart_tren}
+        bar={data?.bar_chart_kecamatan}
+      />
+      <RecentLists
+        orders={data?.pengajuan_menunggu}
+        activities={data?.aktivitas_terbaru}
+      />
     </div>
   );
 }

@@ -4,7 +4,13 @@ import React, { useState, useEffect } from "react";
 import { HiCalendar, HiSun } from "react-icons/hi2";
 import { getWeatherData } from "@/app/services/weatherService";
 
-export default function WelcomeBanner() {
+// 1. Definisikan tipe untuk Props
+interface WelcomeBannerProps {
+  adminName?: string;
+}
+
+// 2. Terima adminName sebagai parameter
+export default function WelcomeBanner({ adminName }: WelcomeBannerProps) {
   const [weather, setWeather] = useState<any>(null);
   const [currentDate, setCurrentDate] = useState<string>("");
   const [greeting, setGreeting] = useState<string>("Selamat Pagi");
@@ -53,7 +59,10 @@ export default function WelcomeBanner() {
             locationName: data.name,
             fetchedAt: new Date().toISOString(),
           };
-          localStorage.setItem("current_validation_weather", JSON.stringify(weatherPayload));
+          localStorage.setItem(
+            "current_validation_weather",
+            JSON.stringify(weatherPayload),
+          );
         }
       });
     };
@@ -65,10 +74,13 @@ export default function WelcomeBanner() {
           fetchWeather(latitude, longitude);
         },
         (error) => {
-          console.error("Gagal mendeteksi lokasi otomatis, menggunakan fallback:", error);
+          console.error(
+            "Gagal mendeteksi lokasi otomatis, menggunakan fallback:",
+            error,
+          );
           fetchWeather(-7.77, 110.37);
         },
-        { enableHighAccuracy: true, timeout: 10000 }
+        { enableHighAccuracy: true, timeout: 10000 },
       );
     } else {
       fetchWeather(-7.77, 110.37);
@@ -77,17 +89,22 @@ export default function WelcomeBanner() {
 
   return (
     <div
-      className="relative w-full rounded-3xl overflow-hidden border border-zinc-100 shadow-sm bg-cover bg-center text-white p-6 md:p-8 flex flex-col md:flex-row justify-between items-start md:items-center min-h-[166px]"
+      className="relative w-full rounded-3xl overflow-hidden border border-zinc-100 shadow-sm bg-cover bg-center text-white p-6 md:p-8 flex flex-col md:flex-row justify-between items-start md:items-center min-h-41.5"
       style={{ backgroundImage: `url('/bannerdinas.png')` }}
     >
       <div className="space-y-2 z-10">
         <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-[#1B4332]">
-          {greeting}, <span className="text-[#00C270]">Dinas Pertanian</span>
+          {/* 3. Gunakan adminName di sini, dengan fallback "Dinas Pertanian" jika data belum ada */}
+          {greeting},{" "}
+          <span className="text-[#00C270]">
+            {adminName || "Dinas Pertanian"}
+          </span>
         </h1>
         <p className="text-gray-600 zinc-100/95 text-sm md:text-sm max-w-xl font-reguler">
-          Kelola pengadaan untuk mendukung ketahanan pangan Kabupaten Sleman secara terpadu dan transparan.
+          Kelola pengadaan untuk mendukung ketahanan pangan Kabupaten Sleman
+          secara terpadu dan transparan.
         </p>
-        
+
         {/* Badge Dinamis: Tanggal & Temperatur/Deskripsi Cuaca */}
         <div className="flex flex-wrap gap-3 pt-2">
           <span className="flex items-center space-x-1.5  text-black text-xs font-semibold">
@@ -97,8 +114,8 @@ export default function WelcomeBanner() {
           <span className="flex items-center space-x-1.5  text-black text-xs font-semibold">
             <HiSun className="text-sm text-amber-300" />
             <span>
-              {weather 
-                ? `${Math.round(weather.main.temp)}°C ${weather.weather[0].description}` 
+              {weather
+                ? `${Math.round(weather.main.temp)}°C ${weather.weather[0].description}`
                 : "Memuat cuaca..."}
             </span>
           </span>

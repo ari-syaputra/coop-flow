@@ -34,7 +34,7 @@ function DashboardSkeleton() {
         {/* KOLOM KIRI (xl:col-span-2) */}
         <div className="xl:col-span-2 space-y-6 flex flex-col">
           {/* Peta Sebaran */}
-          <div className="w-full h-[460px] bg-white border border-slate-100 rounded-2xl p-6 flex flex-col gap-4">
+          <div className="w-full h-115 bg-white border border-slate-100 rounded-2xl p-6 flex flex-col gap-4">
             <div className="space-y-2">
               <div className="h-4 w-48 bg-slate-200 rounded" />
               <div className="h-3 w-32 bg-slate-100 rounded" />
@@ -44,11 +44,11 @@ function DashboardSkeleton() {
 
           {/* Grid 2 Chart */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
-            <div className="bg-white border border-slate-100 rounded-2xl p-6 h-[320px] flex flex-col gap-4">
+            <div className="bg-white border border-slate-100 rounded-2xl p-6 h-80 flex flex-col gap-4">
               <div className="h-4 w-32 bg-slate-200 rounded" />
               <div className="flex-1 bg-slate-50 rounded-xl" />
             </div>
-            <div className="bg-white border border-slate-100 rounded-2xl p-6 h-[320px] flex flex-col gap-4">
+            <div className="bg-white border border-slate-100 rounded-2xl p-6 h-80 flex flex-col gap-4">
               <div className="h-4 w-32 bg-slate-200 rounded" />
               <div className="flex-1 bg-slate-50 rounded-xl" />
             </div>
