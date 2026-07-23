@@ -25,6 +25,13 @@ RUN npm install
 
 # Copy seluruh source code
 COPY . .
+# ⬇️ 1. Masukkan ARG & ENV untuk URL API Backend
+ARG NEXT_PUBLIC_API_URL="https://coop-flow-backend-v1.up.railway.app"
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+
+# ⬇️ 2. Tambahkan ARG & ENV untuk Weather API Key ini (PENTING)
+ARG NEXT_PUBLIC_WEATHER_API_KEY="580138b622128076fd1b6a3651c6a59d"
+ENV NEXT_PUBLIC_WEATHER_API_KEY=$NEXT_PUBLIC_WEATHER_API_KEY
 
 # Build Next.js
 ENV NEXT_TELEMETRY_DISABLED 1
