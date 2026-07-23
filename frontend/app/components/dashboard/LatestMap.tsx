@@ -91,15 +91,20 @@ export default function LatestMap() {
   return (
     <div className="bg-white p-5 rounded-3xl border border-zinc-100 shadow-sm flex flex-col justify-between h-full">
       <div>
-       <div className="flex justify-between items-center pb-3">
-  <h3 className="text-sm font-bold text-zinc-800">Peta Lahan Terbaru</h3>
-  <div className="text-[10px] text-zinc-800 font-medium flex items-center space-x-2">
-    <span>+ Min: 1x</span>
-    <span className="text-zinc-200">•</span>
-    <span>- Maks: 22x</span>
-  </div>
-</div>
-        
+        <div className="flex justify-between items-center pb-3">
+          <h3 className="text-sm font-bold text-zinc-800">
+            Peta Sebaran Lahan & Kebutuhan
+          </h3>
+          <p className="text-xs text-slate-400 mt-0.5">
+            Visualisasi klaster spasial terdaftar
+          </p>
+          <div className="text-[10px] text-zinc-800 font-medium flex items-center space-x-2">
+            <span>+ Min: 1x</span>
+            <span className="text-zinc-200">•</span>
+            <span>- Maks: 22x</span>
+          </div>
+        </div>
+
         <div className="h-115 rounded-2xl relative overflow-hidden bg-zinc-100 border border-zinc-200 shadow-inner z-0">
           {!loading && <MapComponent farmers={farmers} />}
         </div>
@@ -107,39 +112,53 @@ export default function LatestMap() {
 
       {/* FOOTER INFORMASI */}
       <div className="flex flex-wrap items-center justify-between gap-y-2 mt-4 pt-3 border-t border-zinc-100">
-        
         {/* Sisi Kiri: Status Lahan (Didekatkan menggunakan flex space-x-4) */}
         <div className="flex items-center space-x-5">
           <div>
             <div className="flex items-center space-x-1.5">
               <span className="w-2 h-2 rounded-full bg-green-500 inline-block" />
-              <span className="text-[10px] font-bold text-zinc-700">Terverifikasi</span>
+              <span className="text-[10px] font-bold text-zinc-700">
+                Terverifikasi
+              </span>
             </div>
-            <p className="text-[11px] font-medium text-zinc-400 pl-3.5">{totalLands} Lahan</p>
+            <p className="text-[11px] font-medium text-zinc-400 pl-3.5">
+              {totalLands} Lahan
+            </p>
           </div>
 
           <div>
             <div className="flex items-center space-x-1.5">
               <span className="w-2 h-2 rounded-full bg-amber-400 inline-block" />
-              <span className="text-[10px] font-bold text-zinc-700">Menunggu</span>
+              <span className="text-[10px] font-bold text-zinc-700">
+                Menunggu
+              </span>
             </div>
-            <p className="text-[11px] font-medium text-zinc-400 pl-3.5">0 Lahan</p>
+            <p className="text-[11px] font-medium text-zinc-400 pl-3.5">
+              0 Lahan
+            </p>
           </div>
         </div>
 
         {/* Sisi Kanan: Info Tambahan Berdasarkan Data API */}
         <div className="flex items-center space-x-5 text-right">
           <div>
-            <span className="text-[10px] font-bold text-zinc-500 block uppercase tracking-wider">Total Petani</span>
-            <p className="text-[12px] font-bold text-zinc-800">{totalFarmers} Orang</p>
+            <span className="text-[10px] font-bold text-zinc-500 block uppercase tracking-wider">
+              Total Petani
+            </span>
+            <p className="text-[12px] font-bold text-zinc-800">
+              {totalFarmers} Orang
+            </p>
           </div>
           <div className="border-l border-zinc-200 h-6 hidden sm:block" />
           <div>
-            <span className="text-[10px] font-bold text-zinc-500 block uppercase tracking-wider">Luas Wilayah</span>
-            <p className="text-[12px] font-bold text-zinc-800">{totalArea} Ha</p>
+            <span className="text-[10px] font-bold text-zinc-500 block uppercase tracking-wider">
+              Luas Wilayah
+            </span>
+            <p className="text-[12px] font-bold text-zinc-800">
+              {totalArea} Ha
+            </p>
           </div>
         </div>
-
       </div>
     </div>
   );

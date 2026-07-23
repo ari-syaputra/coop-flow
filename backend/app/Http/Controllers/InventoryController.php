@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Fertilizer;
 use App\Models\Procurement;
+use App\Models\InventoryMutation;
 use App\Services\FastApiService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -103,5 +104,28 @@ class InventoryController extends Controller
             'message' => 'Rekomendasi kuantitas pengadaan AI berhasil dihitung!',
             'data'    => $procurement
         ], 201);
+    }
+
+    /**
+     * Get Riwayat Mutasi Stok (Masuk/Keluar)
+     */
+    public function getMutationHistory(Request $request): JsonResponse
+    {
+        $cooperativeId = $request->user()->cooperative_id;
+
+        $histories = InventoryMutation::whereHas('fertilizer', function ($query) use ($cooperativeId) {
+                $query->where('cooperative_id', $cooperativeId);
+            })
+            ->with(['fertilizer' => function ($query) {
+                $query->select('id', 'name');
+            }])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Riwayat mutasi berhasil diambil.',
+            'data'    => $histories
+        ], 200);
     }
 }

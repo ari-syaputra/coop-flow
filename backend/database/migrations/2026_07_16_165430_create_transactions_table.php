@@ -12,8 +12,12 @@ return new class extends Migration
             $table->id();
             $table->foreignId('farmer_id')->constrained('users')->onDelete('restrict'); 
             
+            $table->string('invoice_number')->unique();
             $table->string('payment_method'); 
             $table->decimal('amount_paid', 12, 2); 
+            $table->enum('status', ['pending', 'success', 'failed', 'expired'])->default('pending');
+            $table->json('payment_details')->nullable();
+            
             $table->timestamps();
         });
     }

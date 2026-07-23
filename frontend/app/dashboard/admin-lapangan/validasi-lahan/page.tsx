@@ -16,8 +16,8 @@ export interface Land {
   farmer_id?: number;
   land_name: string;
   area: string | number;
-  unit?: string;   // 🌟 TAMBAHKAN INI (gunakan ? karena nullable/opsional)
-  status?: string; // 🌟 TAMBAHKAN INI
+  unit?: string;
+  status?: string; 
   location_address?: string;
   polygon_coordinates?: [number, number][]; 
   village_id?: string; 
@@ -348,7 +348,7 @@ return (
             </div>
           ) : (
             /* State Kosong saat belum pilih data lahan */
-            <div className="w-full rounded-2xl bg-white shadow-sm p-8.5 min-h-[400px] flex items-center justify-center text-center">
+            <div className="w-full rounded-2xl bg-white shadow-sm p-8.5 min-h-100 flex items-center justify-center text-center">
               <EmptyValidationState />
             </div>
           )}

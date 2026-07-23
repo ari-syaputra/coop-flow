@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import api from "../../../../lib/axios"; // 💡 Jalur relative disesuaikan dengan posisi folder riwayat
+import api from "../../../../lib/axios"; //
 import {
   FaSearch,
   FaArrowDown,
@@ -9,6 +9,7 @@ import {
   FaCalendarAlt,
 } from "react-icons/fa";
 import Swal from "sweetalert2";
+import InventoryTabs from "@/app/components/dashboard/admin-koperasi/inventory/InventoryTabs";
 
 // Definisi tipe data berdasarkan skema JSON backend Laravel kamu
 interface MutationHistoryItem {
@@ -43,16 +44,19 @@ export default function RiwayatStokPage() {
   });
 
   // Ambil data riwayat mutasi dari backend saat halaman diakses
-  // Ubah bagian useEffect di file riwayat/page.tsx kamu:
-
   useEffect(() => {
-    // 💡 URL disesuaikan dengan api.php milikmu yaitu "/cooperative/inventory/history"
     api
       .get("/cooperative/inventory/history")
       .then((response) => {
-        if (response.data.status === "success") {
-          // Backend Laravel mengirim data dalam bentuk: response.data.data
+        // PERBAIKAN: Cek 'success' (boolean) sesuai standar backend Laravel Anda
+        if (response.data.success === true || response.data.data) {
           setHistories(response.data.data || []);
+        } else {
+          // Opsional: Handle jika response success false tapi tidak masuk catch
+          Toast.fire({
+            icon: "error",
+            title: response.data.message || "Gagal mengambil data",
+          });
         }
       })
       .catch((error) => {
@@ -85,14 +89,20 @@ export default function RiwayatStokPage() {
 
   if (loading) {
     return (
-      <div className="p-8 text-center text-zinc-500 font-medium animate-pulse">
-        Memuat data riwayat mutasi...
+      <div className="flex flex-col h-full space-y-4">
+        <InventoryTabs />
+        <div className="p-8 text-center text-zinc-500 font-medium animate-pulse">
+          Memuat data riwayat mutasi...
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4 animate-fadeIn">
+    <div className="flex flex-col h-full space-y-4 animate-fadeIn">
+      {/* TAB NAVIGASI — sama seperti di halaman Stok Saat Ini */}
+      <InventoryTabs />
+
       {/* BAR PENCARIAN */}
       <div className="flex flex-col sm:flex-row gap-4 justify-between items-center bg-white p-4 rounded-xl border border-zinc-100 shadow-sm">
         <div className="relative w-full sm:w-80">
