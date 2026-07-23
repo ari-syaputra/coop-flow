@@ -130,7 +130,7 @@ export default function StokSaatIniPage() {
         {/* 1. Skeleton Bar Alat */}
         <div className="flex flex-col md:flex-row gap-4 justify-between items-center w-full">
           <div className="flex flex-wrap md:flex-nowrap items-center w-full md:flex-1 gap-3">
-            <div className="h-10 bg-zinc-200 rounded-md flex-1 min-w-[200px]"></div>
+            <div className="h-10 bg-zinc-200 rounded-md flex-1 min-w-50"></div>
             <div className="h-10 bg-zinc-200 rounded-md w-24"></div>
             <div className="h-10 bg-zinc-200 rounded-md w-32"></div>
           </div>
@@ -170,11 +170,11 @@ export default function StokSaatIniPage() {
     <div className="flex flex-col h-full space-y-6 animate-fadeIn">
       
       {/* BAR ALAT: SEARCH BAR FULL, FILTER, MANAGE & PREDIKSI AI */}
-      <div className="flex flex-col md:flex-row gap-4 justify-between items-center w-full flex-shrink-0">
+      <div className="flex flex-col md:flex-row gap-4 justify-between items-center w-full shrink-0">
         <div className="flex flex-wrap md:flex-nowrap items-center w-full md:flex-1 gap-3 relative" ref={dropdownRef}>
           
           {/* Input Search */}
-          <div className="relative flex-1 min-w-[200px]">
+          <div className="relative flex-1 min-w-50">
             <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-zinc-400">
               <FaSearch className="text-sm" />
             </span>
@@ -257,7 +257,7 @@ export default function StokSaatIniPage() {
         </div>
         
         {/* Button Prediksi AI */}
-        <div className="w-full md:w-auto flex justify-end flex-shrink-0">
+        <div className="w-full md:w-auto flex justify-end shrink-0">
           <button 
             onClick={handleTriggerPrediction}
             disabled={loadingAI}
@@ -272,7 +272,7 @@ export default function StokSaatIniPage() {
       {/* --- PANEL PENGADAAN AI --- */}
       {aiData && <AiProcurementPanel aiData={aiData} />}
 
-      <div className="flex-shrink-0">
+      <div className="shrink-0">
         <InventorySummary summary={summary} />
       </div>
 
